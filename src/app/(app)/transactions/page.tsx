@@ -8,7 +8,7 @@ import PeriodSelector from '@/components/shared/PeriodSelector';
 import Card from '@/components/ui/Card';
 
 export const metadata: Metadata = {
-  title: 'Transactions | WealthFlow',
+  title: 'Transactions | Rakam',
 };
 
 // Next.js 15 requires async searchParams handling

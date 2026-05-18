@@ -41,8 +41,8 @@ export default function PeriodSelector() {
           style={{
             padding: '0.4rem 0.75rem',
             borderRadius: 'var(--radius-md)',
-            border: `1px solid ${activeLabel === preset.label ? 'var(--color-primary)' : 'var(--color-border)'}`,
-            background: activeLabel === preset.label ? 'var(--color-primary)' : 'var(--color-surface)',
+            border: `1px solid ${activeLabel === preset.label ? 'var(--color-accent)' : 'var(--color-border)'}`,
+            background: activeLabel === preset.label ? 'var(--color-accent)' : 'var(--color-surface)',
             color: activeLabel === preset.label ? '#fff' : 'var(--color-text)',
             fontSize: '0.875rem',
             cursor: 'pointer',

@@ -3,7 +3,7 @@ import styles from '../app.module.css';
 import { getInvestments } from '@/lib/dataService';
 import InvestmentsClient from './InvestmentsClient';
 
-export const metadata: Metadata = { title: 'Investments | WealthFlow' };
+export const metadata: Metadata = { title: 'Investments | Rakam' };
 
 export default async function InvestmentsPage() {
   const investments = await getInvestments();

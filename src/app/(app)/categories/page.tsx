@@ -9,7 +9,7 @@ import CategoryList from '@/components/categories/CategoryList';
 import Card from '@/components/ui/Card';
 
 export const metadata: Metadata = {
-  title: 'Categories | WealthFlow',
+  title: 'Categories | Rakam',
 };
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;

@@ -10,7 +10,7 @@ import TopMerchantsList from '@/components/reports/TopMerchantsList';
 import Card from '@/components/ui/Card';
 
 export const metadata: Metadata = {
-  title: 'Reports | WealthFlow',
+  title: 'Reports | Rakam',
 };
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;

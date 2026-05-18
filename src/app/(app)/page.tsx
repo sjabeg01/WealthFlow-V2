@@ -10,7 +10,7 @@ import RecentTransactions from '@/components/dashboard/RecentTransactions';
 import InsightsBlock from '@/components/dashboard/InsightsBlock';
 
 export const metadata = {
-  title: 'Dashboard | WealthFlow',
+  title: 'Dashboard | Rakam',
 };
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;

@@ -10,7 +10,7 @@ export async function createClient() {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || supabaseUrl === 'REPLACE_WITH_YOUR_SUPABASE_URL' || !supabaseAnonKey || supabaseAnonKey === 'REPLACE_WITH_YOUR_SUPABASE_ANON_KEY') {
-    console.warn('[WealthFlow] Supabase env variables are missing. App will default to Demo Mode.');
+    console.warn('[Rakam] Supabase env variables are missing. App will default to Demo Mode.');
     // We still return a client so types and downstream non-fetching code doesn't crash, 
     // but the dataService will intercept fetches before they hit this client.
     // We use a dummy URL so the SSR client can initialize without throwing.

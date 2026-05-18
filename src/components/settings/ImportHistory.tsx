@@ -48,7 +48,7 @@ export default function ImportHistory({ initialHistory }: ImportHistoryProps) {
             justifyContent: 'space-between', 
             alignItems: 'center',
             padding: '1rem',
-            background: 'var(--color-bg-secondary)',
+            background: 'var(--color-surface-alt)',
             borderRadius: 'var(--radius-md)',
             border: '1px solid var(--color-border)'
           }}

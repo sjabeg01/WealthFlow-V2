@@ -3,7 +3,7 @@ import styles from '../app.module.css';
 import { getGoals } from '@/lib/dataService';
 import GoalsClient from './GoalsClient';
 
-export const metadata: Metadata = { title: 'Goals | WealthFlow' };
+export const metadata: Metadata = { title: 'Goals | Rakam' };
 
 export default async function GoalsPage() {
   const goals = await getGoals();

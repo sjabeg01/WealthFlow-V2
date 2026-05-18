@@ -100,13 +100,13 @@ export default function GoalsClient({ initialGoals }: GoalsClientProps) {
                         <span style={{ fontWeight: 500, color: 'var(--color-text)' }}>${goal.current_amount.toLocaleString()}</span>
                         <span style={{ color: 'var(--color-text-muted)' }}>of ${goal.target_amount.toLocaleString()}</span>
                       </div>
-                      <div style={{ height: '8px', background: 'var(--color-bg-secondary)', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ height: '8px', background: 'var(--color-surface-alt)', borderRadius: '4px', overflow: 'hidden' }}>
                         <div style={{ height: '100%', background: 'var(--color-accent)', width: `${progress}%`, transition: 'width 0.3s ease' }} />
                       </div>
                     </div>
                   </div>
                   {goal.monthly_contribution && goal.monthly_contribution > 0 && (
-                    <div style={{ background: 'var(--color-bg-secondary)', padding: '0.75rem 1.5rem', fontSize: '0.875rem', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border)' }}>
+                    <div style={{ background: 'var(--color-surface-alt)', padding: '0.75rem 1.5rem', fontSize: '0.875rem', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border)' }}>
                       Contributing ${goal.monthly_contribution.toLocaleString()}/mo
                     </div>
                   )}

@@ -21,11 +21,11 @@ export function resetDemoState() {
 
 /**
  * Determines if the app should run in Demo Mode.
- * Returns true if the wealthflow_demo_mode cookie is set, OR if Supabase is missing.
+ * Returns true if the rakam_demo_mode cookie is set, OR if Supabase is missing.
  */
 export async function isDemoModeActive(): Promise<boolean> {
   const cookieStore = await cookies();
-  const demoCookie = cookieStore.get('wealthflow_demo_mode')?.value === 'true';
+  const demoCookie = cookieStore.get('rakam_demo_mode')?.value === 'true';
   
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const missingEnv = !supabaseUrl || supabaseUrl === 'REPLACE_WITH_YOUR_SUPABASE_URL';

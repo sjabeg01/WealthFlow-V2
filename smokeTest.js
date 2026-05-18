@@ -10,7 +10,7 @@ async function runTest() {
   const supabase = createClient(supabaseUrl, supabaseKey);
   const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
-  const testEmail = `testwealthflow${Date.now()}@gmail.com`;
+  const testEmail = `testrakam${Date.now()}@gmail.com`;
   const testPassword = 'Password123!';
 
   console.log('1. Testing Signup...');

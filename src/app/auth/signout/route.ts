@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   });
 
   // Also clear the demo mode cookie if it exists
-  response.cookies.delete('wealthflow_demo_mode');
+  response.cookies.delete('rakam_demo_mode');
 
   revalidatePath('/', 'layout');
   

@@ -36,7 +36,7 @@ export default function TopMerchantsList({ merchants }: TopMerchantsListProps) {
                 style={{ 
                   height: '6px', 
                   width: `${widthPercent}%`, 
-                  background: 'var(--color-primary)', 
+                  background: 'var(--color-accent)', 
                   borderRadius: 'var(--radius-full)',
                   opacity: 0.8
                 }} 

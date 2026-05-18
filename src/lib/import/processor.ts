@@ -1,5 +1,5 @@
 // ============================================================
-// WealthFlow v2 — Import Processor
+// Rakam v2 — Import Processor
 // Ties together CSV parsing, column mapping, and normalization.
 // Generates the ImportPreview state.
 // ============================================================
@@ -12,6 +12,31 @@ import type { ImportPreview, ParsedRow, ColumnMapping } from '@/types';
 export function processDataGrid(grid: string[][], fileName: string, fileType: 'csv' | 'xlsx'): ImportPreview {
   const { headers, data: rawRows } = extractDataGrid(grid);
   const { mapping, confidence } = detectColumns(headers);
+
+  // Scan date column to detect dominant date format (US vs AU)
+  let formatPreference: 'US' | 'AU' = 'AU';
+  if (mapping.dateColumn) {
+    let auCount = 0;
+    let usCount = 0;
+    rawRows.forEach((rawRow) => {
+      const dateStr = rawRow[mapping.dateColumn!];
+      if (dateStr) {
+        const match = dateStr.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+        if (match) {
+          const n1 = parseInt(match[1]);
+          const n2 = parseInt(match[2]);
+          if (n1 > 12 && n2 <= 12) {
+            auCount++;
+          } else if (n2 > 12 && n1 <= 12) {
+            usCount++;
+          }
+        }
+      }
+    });
+    if (usCount > auCount) {
+      formatPreference = 'US';
+    }
+  }
 
   const acceptedRows: ParsedRow[] = [];
   const skippedRows: Array<ParsedRow & { reason: string }> = [];
@@ -43,7 +68,7 @@ export function processDataGrid(grid: string[][], fileName: string, fileType: 'c
       }
     }
 
-    const parsedDate = dateStr ? parseDate(dateStr) : null;
+    const parsedDate = dateStr ? parseDate(dateStr, formatPreference) : null;
 
     const rowData: ParsedRow = {
       rowIndex: displayIndex,
@@ -55,7 +80,7 @@ export function processDataGrid(grid: string[][], fileName: string, fileType: 'c
 
     if (!parsedDate) {
       skippedRows.push({ ...rowData, reason: 'Invalid or missing date' });
-    } else if (amount === null) {
+    } else if (amount === null || isNaN(amount)) {
       skippedRows.push({ ...rowData, reason: 'Invalid or missing amount' });
     } else if (!descStr) {
       skippedRows.push({ ...rowData, reason: 'Missing description' });
@@ -82,6 +107,31 @@ export function reprocessWithMapping(rawRows: Record<string, string>[], mapping:
   acceptedRows: ParsedRow[];
   skippedRows: Array<ParsedRow & { reason: string }>;
 } {
+   // Scan date column to detect dominant date format (US vs AU)
+   let formatPreference: 'US' | 'AU' = 'AU';
+   if (mapping.dateColumn) {
+     let auCount = 0;
+     let usCount = 0;
+     rawRows.forEach((rawRow) => {
+       const dateStr = rawRow[mapping.dateColumn!];
+       if (dateStr) {
+         const match = dateStr.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+         if (match) {
+           const n1 = parseInt(match[1]);
+           const n2 = parseInt(match[2]);
+           if (n1 > 12 && n2 <= 12) {
+             auCount++;
+           } else if (n2 > 12 && n1 <= 12) {
+             usCount++;
+           }
+         }
+       }
+     });
+     if (usCount > auCount) {
+       formatPreference = 'US';
+     }
+   }
+
    const acceptedRows: ParsedRow[] = [];
    const skippedRows: Array<ParsedRow & { reason: string }> = [];
  
@@ -109,7 +159,7 @@ export function reprocessWithMapping(rawRows: Record<string, string>[], mapping:
        }
      }
  
-     const parsedDate = dateStr ? parseDate(dateStr) : null;
+     const parsedDate = dateStr ? parseDate(dateStr, formatPreference) : null;
  
      const rowData: ParsedRow = {
        rowIndex: displayIndex,

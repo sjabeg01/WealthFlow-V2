@@ -1,5 +1,5 @@
 -- ============================================================
--- WealthFlow v2 — Migration 003: System Categories Seed
+-- Rakam v2 — Migration 003: System Categories Seed
 -- Inserts default system categories for new users via a trigger.
 -- ============================================================
 

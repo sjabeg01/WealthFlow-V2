@@ -1,5 +1,5 @@
 -- ============================================================
--- WealthFlow v2 — Migration 002: Row-Level Security Policies
+-- Rakam v2 — Migration 002: Row-Level Security Policies
 -- Run AFTER 001_initial_schema.sql
 -- ============================================================
 

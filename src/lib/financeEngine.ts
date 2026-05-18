@@ -1,5 +1,5 @@
 // ============================================================
-// WealthFlow v2 — Finance Engine
+// Rakam v2 — Finance Engine
 // The ONLY place where financial math is computed.
 // All pages must import from here. No local math allowed.
 //
@@ -24,10 +24,10 @@ import { format } from 'date-fns';
 // Core aggregates
 // -----------------------------------------------
 
-/** Total income: all credits excluding transfers */
+/** Total income: all credits excluding transfers and refunds */
 export function getIncome(transactions: Transaction[]): number {
   return transactions
-    .filter((t) => t.direction === 'credit' && !t.is_transfer)
+    .filter((t) => t.direction === 'credit' && !t.is_transfer && t.type !== 'refund')
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 }
 
@@ -83,12 +83,16 @@ export function getFinanceSummary(
 // Category breakdown
 // -----------------------------------------------
 
-/** Spending grouped by category (expenses only, excluding transfers) */
+/** Spending grouped by category (expenses only, excluding transfers). Refunds reduce their category totals. */
 export function getByCategory(
   transactions: Transaction[]
 ): CategoryBreakdown[] {
   const expenseTransactions = transactions.filter(
     (t) => t.direction === 'debit' && !t.is_transfer && t.type !== 'refund'
+  );
+
+  const refundTransactions = transactions.filter(
+    (t) => t.type === 'refund'
   );
 
   const totals = new Map<
@@ -102,6 +106,7 @@ export function getByCategory(
     }
   >();
 
+  // Add debits
   for (const t of expenseTransactions) {
     const key = t.category_id ?? 'uncategorized';
     const existing = totals.get(key);
@@ -121,12 +126,36 @@ export function getByCategory(
     }
   }
 
-  const grandTotal = Array.from(totals.values()).reduce(
+  // Subtract refunds
+  for (const t of refundTransactions) {
+    const key = t.category_id ?? 'uncategorized';
+    const existing = totals.get(key);
+    const amount = Math.abs(t.amount);
+
+    if (existing) {
+      existing.total = Math.max(0, existing.total - amount);
+      existing.count += 1;
+    } else {
+      // If we got a refund but no matching debit, count it as a negative total
+      totals.set(key, {
+        categoryId: t.category_id,
+        categoryName: t.category?.name ?? 'Uncategorized',
+        color: t.category?.color ?? '#9E9E9E',
+        total: -amount,
+        count: 1,
+      });
+    }
+  }
+
+  // Filter out zero totals to avoid cluttering charts
+  const list = Array.from(totals.values()).filter(v => v.total !== 0);
+
+  const grandTotal = list.reduce(
     (sum, v) => sum + v.total,
     0
   );
 
-  return Array.from(totals.values())
+  return list
     .map((v) => ({
       categoryId: v.categoryId,
       categoryName: v.categoryName,
@@ -190,7 +219,7 @@ export function getTrend(transactions: Transaction[]): TrendData[] {
 // Top merchants
 // -----------------------------------------------
 
-/** Top spending merchants by total, expenses only */
+/** Top spending merchants by total, expenses only. Refunds reduce merchant totals. */
 export function getTopMerchants(
   transactions: Transaction[],
   limit = 10
@@ -199,8 +228,13 @@ export function getTopMerchants(
     (t) => t.direction === 'debit' && !t.is_transfer && t.type !== 'refund'
   );
 
+  const refundTransactions = transactions.filter(
+    (t) => t.type === 'refund'
+  );
+
   const totals = new Map<string, { total: number; count: number }>();
 
+  // Add debits
   for (const t of expenseTransactions) {
     const key = t.merchant ?? t.description;
     const existing = totals.get(key);
@@ -214,7 +248,22 @@ export function getTopMerchants(
     }
   }
 
+  // Subtract refunds
+  for (const t of refundTransactions) {
+    const key = t.merchant ?? t.description;
+    const existing = totals.get(key);
+    const amount = Math.abs(t.amount);
+
+    if (existing) {
+      existing.total = Math.max(0, existing.total - amount);
+      existing.count += 1;
+    } else {
+      totals.set(key, { total: -amount, count: 1 });
+    }
+  }
+
   return Array.from(totals.entries())
+    .filter(([_, v]) => v.total !== 0)
     .map(([merchant, v]) => ({
       merchant,
       total: v.total,

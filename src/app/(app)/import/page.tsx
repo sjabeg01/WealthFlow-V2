@@ -3,7 +3,7 @@ import ImportClient from './ImportClient';
 import { getAccounts } from '@/lib/dataService';
 
 export const metadata: Metadata = {
-  title: 'Import Transactions | WealthFlow',
+  title: 'Import Transactions | Rakam',
 };
 
 export default async function ImportPage() {

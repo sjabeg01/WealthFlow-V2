@@ -57,7 +57,7 @@ export default function RecentTransactions({ transactions }: RecentTransactionsP
       })}
       
       <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-        <Link href="/transactions" style={{ fontSize: '0.875rem', color: 'var(--color-primary)', textDecoration: 'none', fontWeight: 500 }}>
+        <Link href="/transactions" style={{ fontSize: '0.875rem', color: 'var(--color-accent)', textDecoration: 'none', fontWeight: 500 }}>
           View all transactions &rarr;
         </Link>
       </div>

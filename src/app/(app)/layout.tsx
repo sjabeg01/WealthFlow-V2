@@ -7,7 +7,7 @@ import styles from './app.module.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'WealthFlow',
+  title: 'Rakam',
 };
 
 export default async function AppLayout({

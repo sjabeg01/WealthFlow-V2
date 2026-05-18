@@ -22,7 +22,7 @@ export async function middleware(request: NextRequest) {
     supabaseAnonKey &&
     supabaseAnonKey !== 'REPLACE_WITH_YOUR_SUPABASE_ANON_KEY';
 
-  const demoCookie = request.cookies.get('wealthflow_demo_mode')?.value === 'true';
+  const demoCookie = request.cookies.get('rakam_demo_mode')?.value === 'true';
 
   if (!isConfigured || demoCookie) {
     return supabaseResponse;

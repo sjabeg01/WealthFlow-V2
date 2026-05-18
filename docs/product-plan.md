@@ -1,7 +1,7 @@
-# WealthFlow v2 — Product Plan
+# Rakam v2 — Product Plan
 
 ## Product Vision
-WealthFlow v2 is a personal finance and investing web app that helps adults understand where their money goes and make better investing decisions.
+Rakam v2 is a personal finance and investing web app that helps adults understand where their money goes and make better investing decisions.
 
 It is built for long-term trust, not short-term wow factor.
 

@@ -1,5 +1,5 @@
 -- ============================================================
--- WealthFlow v2 — Migration 001: Initial Schema
+-- Rakam v2 — Migration 001: Initial Schema
 -- Run this in your Supabase SQL editor or via Supabase CLI.
 -- ============================================================
 

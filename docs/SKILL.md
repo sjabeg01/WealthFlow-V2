@@ -1,4 +1,4 @@
-# WealthFlow v2 — SKILL.md
+# Rakam v2 — SKILL.md
 > Project memory. Read this before making any changes.
 
 ---

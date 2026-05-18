@@ -50,26 +50,24 @@ export default function Sidebar() {
     // Full window reload to login to clear all in-memory states
     window.location.href = '/login';
   }
-
   return (
     <aside className={styles.sidebar}>
       {/* Logo */}
       <div className={styles.sidebarLogo}>
         <div className={styles.sidebarLogoMark}>
           <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="32" height="32" rx="8" fill="url(#wf_grad)" />
-            <path d="M6 10L10 22L14 10L18 22L22 10" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M22 10H27" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M20 16H25" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <rect width="32" height="32" rx="8" fill="url(#rkm_grad)" />
+            <path d="M10 24V8H16.5C18.9853 8 21 10.0147 21 12.5C21 14.9853 18.9853 17 16.5 17H10" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M15 17L21 24" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
             <defs>
-              <linearGradient id="wf_grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+              <linearGradient id="rkm_grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
                 <stop stopColor="#3B82F6" />
                 <stop offset="1" stopColor="#1D4ED8" />
               </linearGradient>
             </defs>
           </svg>
         </div>
-        <span className={styles.sidebarLogoText}>WealthFlow</span>
+        <span className={styles.sidebarLogoText}>Rakam</span>
       </div>
 
       {/* Navigation */}

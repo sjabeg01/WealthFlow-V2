@@ -1,5 +1,5 @@
 // ============================================================
-// WealthFlow v2 — QA Data Cleanup Script
+// Rakam v2 — QA Data Cleanup Script
 // Cleans app data for approved test accounts ONLY.
 // Does NOT create any new auth users.
 //

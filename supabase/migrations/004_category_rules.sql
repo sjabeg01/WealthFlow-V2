@@ -1,5 +1,5 @@
 -- ============================================================
--- WealthFlow v2 — Migration 004: Category Rules
+-- Rakam v2 — Migration 004: Category Rules
 -- Supports user-defined categorization logic
 -- ============================================================
 

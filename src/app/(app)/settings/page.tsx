@@ -5,7 +5,7 @@ import AccountList from '@/components/settings/AccountList';
 import ImportHistory from '@/components/settings/ImportHistory';
 import Card from '@/components/ui/Card';
 
-export const metadata: Metadata = { title: 'Settings | WealthFlow' };
+export const metadata: Metadata = { title: 'Settings | Rakam' };
 
 /**
  * Settings Page

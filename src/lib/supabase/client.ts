@@ -10,14 +10,14 @@ export function createClient() {
 
   if (!supabaseUrl || supabaseUrl === 'REPLACE_WITH_YOUR_SUPABASE_URL') {
     throw new Error(
-      '[WealthFlow] Supabase URL is not configured.\n' +
+      '[Rakam] Supabase URL is not configured.\n' +
       'Copy .env.example to .env.local and fill in your Supabase project URL.'
     );
   }
 
   if (!supabaseAnonKey || supabaseAnonKey === 'REPLACE_WITH_YOUR_SUPABASE_ANON_KEY') {
     throw new Error(
-      '[WealthFlow] Supabase anon key is not configured.\n' +
+      '[Rakam] Supabase anon key is not configured.\n' +
       'Copy .env.example to .env.local and fill in your Supabase anon key.'
     );
   }

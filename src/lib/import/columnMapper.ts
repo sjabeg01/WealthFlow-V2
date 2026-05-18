@@ -1,5 +1,5 @@
 // ============================================================
-// WealthFlow v2 — Column Mapper
+// Rakam v2 — Column Mapper
 // Auto-detects columns for Date, Description, Amount from CSV headers.
 // Handles both single-amount columns and split debit/credit columns.
 // ============================================================

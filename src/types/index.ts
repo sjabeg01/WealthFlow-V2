@@ -1,5 +1,5 @@
 // ============================================================
-// Shared TypeScript types for WealthFlow v2
+// Shared TypeScript types for Rakam v2
 // All domain types live here — import from '@/types' everywhere
 // ============================================================
 

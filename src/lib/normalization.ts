@@ -1,5 +1,5 @@
 // ============================================================
-// WealthFlow v2 — Transaction Normalization Utilities
+// Rakam v2 — Transaction Normalization Utilities
 // Used by the import pipeline to clean and classify raw data.
 // ============================================================
 
@@ -79,18 +79,18 @@ interface StaticRule {
 }
 
 const STATIC_CATEGORY_RULES: StaticRule[] = [
-  { pattern: /\b(coles|woolworths|aldi|iga|harris farm|costco|supermarket)\b/i, categoryName: 'Groceries' },
+  { pattern: /\b(coles|woolworths|aldi|iga|harris farm|costco|supermarket|grocery|groceries|food)\b/i, categoryName: 'Groceries' },
   { pattern: /\b(mcdonald|kfc|subway|domino|pizza|burger|grill|bistro|cafe|coffee|restaurant|sushi|thai|chinese|indian)\b/i, categoryName: 'Dining Out' },
   { pattern: /\b(uber|lyft|taxi|cab|ola|didi|bus|train|ferry|opal|myki|go card|translink)\b/i, categoryName: 'Transport' },
   { pattern: /\b(bp|shell|caltex|ampol|7-eleven|petrol|fuel|service station)\b/i, categoryName: 'Fuel' },
-  { pattern: /\b(rent|mortgage|strata|realestate|real estate|ray white|harcourt)\b/i, categoryName: 'Rent / Mortgage' },
-  { pattern: /\b(electricity|gas|water|internet|broadband|optus|telstra|vodafone|tpg|aussie broadband)\b/i, categoryName: 'Utilities' },
+  { pattern: /\b(rent|mortgage|strata|realestate|real estate|ray white|harcourt|housing)\b/i, categoryName: 'Rent / Mortgage' },
+  { pattern: /\b(electricity|gas|water|internet|broadband|optus|telstra|vodafone|tpg|aussie broadband|bill|utility)\b/i, categoryName: 'Utilities' },
   { pattern: /\b(doctor|gp|pharmacy|chemist|hospital|dental|physiotherapy|health)\b/i, categoryName: 'Health' },
   { pattern: /\b(insurance|nrma|racq|rac|budget direct|allianz|medibank|bupa)\b/i, categoryName: 'Insurance' },
   { pattern: /\b(netflix|spotify|apple|google|amazon prime|disney|stan|binge|subscription|membership)\b/i, categoryName: 'Subscriptions' },
   { pattern: /\b(cinema|movies|event|concert|ticketek|ticketmaster|steam|playstation|xbox)\b/i, categoryName: 'Entertainment' },
   { pattern: /\b(amazon|ebay|asos|zara|h&m|cotton on|uniqlo|target|kmart|big w|david jones|myer)\b/i, categoryName: 'Shopping' },
-  { pattern: /\b(salary|payroll|pay|wages|income|dividend|interest earned)\b/i, categoryName: 'Salary / Income' },
+  { pattern: /\b(salary|payroll|pay|wages|income|dividend|interest earned|bonus)\b/i, categoryName: 'Salary / Income' },
   { pattern: /\b(transfer|bpay|pay anyone|send money|payment to|payment from)\b/i, categoryName: 'Transfers' },
   { pattern: /\b(atm fee|monthly fee|account fee|overdraft|dishonour|bank charge)\b/i, categoryName: 'Fees & Charges' },
   { pattern: /\b(commsec|selfwealth|stake|pearler|vanguard|blackrock|etf|asx|shares)\b/i, categoryName: 'Investments' },
@@ -246,27 +246,43 @@ const MONTH_NAMES: Record<string, string> = {
   sep: '09', oct: '10', nov: '11', dec: '12',
 };
 
-/** Parse a date string into ISO YYYY-MM-DD format. Returns null if unparseable. */
-export function parseDate(raw: string): string | null {
+/** Parse a date string into ISO YYYY-MM-DD format. Returns null if unparseable. Supports an optional preference to resolve ambiguous D/M/Y vs M/D/Y. */
+export function parseDate(raw: string, formatPreference?: 'US' | 'AU'): string | null {
   if (!raw) return null;
   const str = raw.trim();
 
   // Try ISO first
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
 
-  // D/M/YYYY or DD/MM/YYYY or D/M/YY (AU preferred)
+  // D/M/YYYY or DD/MM/YYYY or D/M/YY
   const ddmmyyyy = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
   if (ddmmyyyy) {
-    let [, dd, mm, yyyy] = ddmmyyyy;
+    let [, p1, p2, yyyy] = ddmmyyyy;
     // Handle 2-digit years
     if (yyyy.length === 2) {
       yyyy = parseInt(yyyy) > 50 ? `19${yyyy}` : `20${yyyy}`;
     }
-    // If the "month" is > 12, it must be US format MM/DD/YYYY
-    if (parseInt(mm) > 12) {
-      return `${yyyy}-${dd.padStart(2, '0')}-${mm.padStart(2, '0')}`;
+
+    const n1 = parseInt(p1);
+    const n2 = parseInt(p2);
+
+    // If one is clearly > 12, it must be the day, so other is month.
+    if (n1 > 12 && n2 <= 12) {
+      // Must be DD/MM/YYYY (AU)
+      return `${yyyy}-${p2.padStart(2, '0')}-${p1.padStart(2, '0')}`;
     }
-    return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+    if (n2 > 12 && n1 <= 12) {
+      // Must be MM/DD/YYYY (US)
+      return `${yyyy}-${p1.padStart(2, '0')}-${p2.padStart(2, '0')}`;
+    }
+
+    // Both are <= 12 (ambiguous). Rely on preference.
+    if (formatPreference === 'US') {
+      return `${yyyy}-${p1.padStart(2, '0')}-${p2.padStart(2, '0')}`;
+    } else {
+      // Default to AU: DD/MM/YYYY
+      return `${yyyy}-${p2.padStart(2, '0')}-${p1.padStart(2, '0')}`;
+    }
   }
 
   // DD-MM-YYYY

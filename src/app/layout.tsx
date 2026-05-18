@@ -3,8 +3,8 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'WealthFlow — Personal Finance & Investing',
-    template: '%s | WealthFlow',
+    default: 'Rakam — Personal Finance & Investing',
+    template: '%s | Rakam',
   },
   description:
     'A calm, trustworthy personal finance app. Import bank statements, track spending, manage goals, and invest smarter.',

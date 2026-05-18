@@ -60,6 +60,13 @@ export function getPresetRanges(): { label: string; range: DateRange }[] {
       }
     },
     {
+      label: 'This Year',
+      range: {
+        from: format(startOfYear(now), 'yyyy-MM-dd'),
+        to: format(endOfYear(now), 'yyyy-MM-dd'),
+      }
+    },
+    {
       label: 'All Time',
       range: {
         from: '2000-01-01',

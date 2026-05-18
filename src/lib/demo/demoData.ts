@@ -1,5 +1,5 @@
 // ============================================================
-// WealthFlow v2 — Demo Mode
+// Rakam v2 — Demo Mode
 // Static curated dataset. NEVER touches real Supabase tables.
 // This is the only source of demo data.
 // ============================================================

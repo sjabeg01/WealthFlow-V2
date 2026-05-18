@@ -16,7 +16,7 @@ export default function DemoBanner({ visible }: DemoBannerProps) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <PlayCircle size={16} />
         <span className={styles.demoBannerText}>
-          <strong>Demo Mode Active:</strong> You are exploring WealthFlow with a curated financial dataset.
+          <strong>Demo Mode Active:</strong> You are exploring Rakam with a curated financial dataset.
         </span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>

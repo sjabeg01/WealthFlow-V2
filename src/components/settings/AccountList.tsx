@@ -48,7 +48,7 @@ export default function AccountList({ initialAccounts }: AccountListProps) {
       </div>
 
       {accounts.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '3rem 1rem', background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-md)' }}>
+        <div style={{ textAlign: 'center', padding: '3rem 1rem', background: 'var(--color-surface-alt)', borderRadius: 'var(--radius-md)' }}>
           <Building2 size={40} style={{ margin: '0 auto 1rem', color: 'var(--color-text-muted)' }} />
           <p style={{ color: 'var(--color-text)', fontWeight: 500, marginBottom: '0.5rem' }}>No accounts found</p>
           <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Add your first account to start importing transactions.</p>
@@ -71,12 +71,12 @@ export default function AccountList({ initialAccounts }: AccountListProps) {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 'var(--radius-full)', background: 'var(--color-bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 'var(--radius-full)', background: 'var(--color-surface-alt)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
                     <Icon size={20} />
                   </div>
                   <div>
                     <h4 style={{ fontWeight: 500, color: 'var(--color-text)' }}>
-                      {acc.name} {!acc.is_active && <span style={{ fontSize: '0.75rem', fontWeight: 'normal', color: 'var(--color-text-muted)', marginLeft: '0.5rem', background: 'var(--color-bg-secondary)', padding: '2px 6px', borderRadius: '4px' }}>Inactive</span>}
+                      {acc.name} {!acc.is_active && <span style={{ fontSize: '0.75rem', fontWeight: 'normal', color: 'var(--color-text-muted)', marginLeft: '0.5rem', background: 'var(--color-surface-alt)', padding: '2px 6px', borderRadius: '4px' }}>Inactive</span>}
                     </h4>
                     <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
                       {acc.institution} {acc.last4 ? `•••• ${acc.last4}` : ''}

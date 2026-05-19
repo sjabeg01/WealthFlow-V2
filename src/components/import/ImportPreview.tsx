@@ -183,7 +183,7 @@ export default function ImportPreviewUI({
       return {
         ...row,
         final_type: finalType,
-        signed_amount: normalizeAmount(rawAmountForNorm, finalType),
+        signed_amount: normalizeAmount(rawAmountForNorm, finalType === 'skip' ? 'needs_review' : finalType),
         confidence: row.user_override ? 'high' : result.confidence,
         classification_reason: row.user_override ? `User manual override to ${row.user_override}` : result.classification_reason
       };
@@ -450,7 +450,14 @@ export default function ImportPreviewUI({
                   ))}
                   
                   {classifiedAcceptedRows.slice(0, 10).map((row, i) => (
-                    <tr key={`acc-${i}`} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                    <tr 
+                      key={`acc-${i}`} 
+                      style={{ 
+                        borderBottom: '1px solid var(--color-border)',
+                        opacity: row.final_type === 'skip' ? 0.5 : 1,
+                        textDecoration: row.final_type === 'skip' ? 'line-through' : 'none'
+                      }}
+                    >
                       <td style={{ padding: '0.75rem 1rem', color: 'var(--color-text-muted)' }}>{row.rowIndex}</td>
                       <td style={{ padding: '0.75rem 1rem' }}>{row.date}</td>
                       <td style={{ padding: '0.75rem 1rem' }}>{row.description}</td>
@@ -472,9 +479,13 @@ export default function ImportPreviewUI({
                           ? 'var(--color-danger)' 
                           : 'inherit' 
                       }}>
-                        {row.signed_amount >= 0 ? '+' : ''}{row.signed_amount.toFixed(2)}
+                        {row.final_type === 'skip' ? '0.00' : (row.signed_amount >= 0 ? '+' : '') + row.signed_amount.toFixed(2)}
                       </td>
-                      <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}><Badge variant="success">OK</Badge></td>
+                      <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                        <Badge variant={row.final_type === 'skip' ? 'danger' : 'success'}>
+                          {row.final_type === 'skip' ? 'Skipped' : 'OK'}
+                        </Badge>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -511,7 +522,7 @@ function ClassificationPreview({
   categories: Category[]; 
   onRowsChange: (rows: ParsedRow[]) => void; 
 }) {
-  const [overrides, setOverrides] = React.useState<Record<number, FinalType>>({});
+  const [overrides, setOverrides] = React.useState<Record<number, FinalType | 'skip'>>({});
 
   const classifiedRows = React.useMemo(() => {
     return rows.map((row) => {
@@ -547,9 +558,9 @@ function ClassificationPreview({
       
       return {
         ...row,
-        final_type: result.final_type,
+        final_type: finalType,
         user_override,
-        signed_amount: normalizeAmount(rawAmountForNorm, finalType),
+        signed_amount: normalizeAmount(rawAmountForNorm, finalType === 'skip' ? 'needs_review' : finalType),
         confidence: user_override ? 'high' : result.confidence,
         reason: user_override ? `User manual override to ${user_override}` : result.classification_reason
       };
@@ -594,7 +605,7 @@ function ClassificationPreview({
 
   const netSurplus = summary.total_income - summary.total_expense;
 
-  function handleOverride(rowIndex: number, override: FinalType) {
+  function handleOverride(rowIndex: number, override: FinalType | 'skip') {
     setOverrides(prev => ({
       ...prev,
       [rowIndex]: override
@@ -642,10 +653,10 @@ function ClassificationPreview({
         <div>Net Surplus: <strong style={{ color: netSurplus >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>{netSurplus >= 0 ? '+' : ''}{netSurplus.toFixed(2)}</strong></div>
       </div>
 
-      {classifiedRows.some(r => r.confidence !== 'high') && (
+      {classifiedRows.some(r => (r.user_override ?? r.final_type) === 'needs_review') && (
         <div style={{ border: '1px solid var(--color-warning)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
           <div style={{ background: 'var(--color-warning-light)', padding: '0.75rem 1rem', borderBottom: '1px solid var(--color-warning)' }}>
-            <h4 style={{ margin: 0, color: 'var(--color-warning)' }}>⚠️ Review Suggested — {classifiedRows.filter(r => r.confidence !== 'high').length} rows</h4>
+            <h4 style={{ margin: 0, color: 'var(--color-warning)' }}>⚠️ Needs Review — {classifiedRows.filter(r => (r.user_override ?? r.final_type) === 'needs_review').length} rows</h4>
           </div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
@@ -661,9 +672,9 @@ function ClassificationPreview({
               </thead>
               <tbody>
                 {classifiedRows
-                  .filter(r => r.confidence !== 'high')
+                  .filter(r => (r.user_override ?? r.final_type) === 'needs_review')
                   .map((row, i) => (
-                    <tr key={i} style={{ borderTop: '1px solid var(--color-border)', background: row.confidence === 'low' ? 'rgba(239, 68, 68, 0.05)' : 'transparent' }}>
+                    <tr key={i} style={{ borderTop: '1px solid var(--color-border)', background: 'rgba(245, 158, 11, 0.05)' }}>
                       <td style={{ padding: '0.75rem 1rem' }}>{row.date}</td>
                       <td style={{ padding: '0.75rem 1rem' }}>{row.description}</td>
                       <td style={{ padding: '0.75rem 1rem' }}>{Math.abs(row.signed_amount).toFixed(2)}</td>
@@ -682,13 +693,15 @@ function ClassificationPreview({
                           className="input"
                           style={{ padding: '0.25rem 0.5rem', height: '30px' }}
                           value={row.user_override ?? row.final_type}
-                          onChange={e => handleOverride(row.rowIndex, e.target.value as FinalType)}
+                          onChange={e => handleOverride(row.rowIndex, e.target.value as FinalType | 'skip')}
                         >
+                          <option value="needs_review">Needs Review</option>
                           <option value="expense">Expense</option>
                           <option value="income">Income</option>
                           <option value="transfer">Transfer</option>
+                          <option value="investment">Investment</option>
                           <option value="refund">Refund</option>
-                          <option value="needs_review">Skip (Review Later)</option>
+                          <option value="skip">Skip / Discard</option>
                         </select>
                       </td>
                     </tr>

@@ -108,6 +108,11 @@ export async function commitImportBatch(
     }
     
     // Add to set to prevent duplicates within the same file
+    if (row.user_override === 'skip') {
+      finalSkippedDueToDuplicate.push({ ...row, reason: 'User skipped' });
+      continue;
+    }
+
     existingSet.add(dupKey);
     finalAcceptedRows.push(row);
     
@@ -242,7 +247,7 @@ export async function commitImportBatch(
       batch_id: batchId,
       row_index: r.rowIndex,
       raw_data: r.rawData,
-      status: 'duplicate',
+      status: r.reason === 'User skipped' ? 'skipped' : 'duplicate',
       skip_reason: r.reason,
     }))
   ];

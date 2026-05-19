@@ -111,7 +111,7 @@ export interface ParsedRow {
   rawData: Record<string, string>;
   inferredCategoryName?: string | null;
   inferredCategoryType?: string | null;
-  user_override?: FinalType | 'needs_review';
+  user_override?: FinalType | 'needs_review' | 'skip';
 }
 
 export interface ColumnMapping {

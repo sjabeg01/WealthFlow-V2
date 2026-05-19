@@ -2,7 +2,9 @@
 
 import { createClient } from '@/lib/supabase/server';
 import type { ImportPreview, ParsedRow } from '@/types';
-import { inferType, inferDirection, cleanMerchant, detectCategory } from '@/lib/normalization';
+import { cleanMerchant, detectCategory } from '@/lib/normalization';
+import { deriveFinalType, type ClassificationContext } from '@/lib/importPipeline/deriveFinalType';
+import { normalizeAmount } from '@/lib/importPipeline/normalizeAmount';
 import { processTransferPairing } from '@/lib/import/transferMatcher';
 
 export async function commitImportBatch(
@@ -52,14 +54,14 @@ export async function commitImportBatch(
     
   if (rulesData) userRules = rulesData;
 
-  // Fetch System Categories for Fallback resolution
-  let systemCategories: any[] = [];
-  const { data: sysCatData } = await supabase
+  // Fetch all user and system categories with their type
+  let allCategories: any[] = [];
+  const { data: allCatData } = await supabase
     .from('categories')
-    .select('id, name')
-    .eq('is_system', true);
+    .select('id, name, type, is_system')
+    .or(`user_id.eq.${userId},is_system.eq.true`);
   
-  if (sysCatData) systemCategories = sysCatData;
+  if (allCatData) allCategories = allCatData;
 
   // 2. Prepare Transactions & Detect Duplicates
   const dates = acceptedRows.map(r => r.date).filter(Boolean) as string[];
@@ -77,9 +79,9 @@ export async function commitImportBatch(
     if (data) existingTransactions = data;
   }
 
-  // Create lookup set for O(1) duplicate checks
+  // Create lookup set for O(1) duplicate checks using absolute amounts
   const existingSet = new Set(
-    existingTransactions.map(t => `${t.date}|${Number(t.amount).toFixed(2)}|${t.merchant}|${t.description}`)
+    existingTransactions.map(t => `${t.date}|${Math.abs(Number(t.amount)).toFixed(2)}|${t.merchant}|${t.description}`)
   );
 
   let duplicateCount = 0;
@@ -87,6 +89,7 @@ export async function commitImportBatch(
   const finalSkippedDueToDuplicate: Array<ParsedRow & { reason: string }> = [];
 
   const transactionsToInsert = [];
+  const reviewQueue = [];
   
   // High confidence transfer candidates (to be paired later)
   const transferCandidates: any[] = [];
@@ -96,8 +99,8 @@ export async function commitImportBatch(
     const merchant = cleanMerchant(rawDesc);
     const amount = row.amount || 0;
     
-    // Check Duplicate
-    const dupKey = `${row.date}|${amount.toFixed(2)}|${merchant}|${rawDesc}`;
+    // Check Duplicate using absolute amount
+    const dupKey = `${row.date}|${Math.abs(amount).toFixed(2)}|${merchant}|${rawDesc}`;
     if (existingSet.has(dupKey)) {
       duplicateCount++;
       finalSkippedDueToDuplicate.push({ ...row, reason: 'Duplicate' });
@@ -108,20 +111,69 @@ export async function commitImportBatch(
     existingSet.add(dupKey);
     finalAcceptedRows.push(row);
     
-    const { type, confidence } = inferType(amount, rawDesc, merchant);
-    const direction = inferDirection(amount);
-    
-    // Auto-categorize
+    // Auto-categorize (for label only)
     const { categoryId: detectedCatId, categoryName: detectedCatName } = detectCategory(rawDesc, merchant, userRules);
     
-    // We only have categoryName for fallback static rules, which we'd need to resolve to an ID if we want to assign it.
-    let finalCategoryId = detectedCatId;
-    if (!finalCategoryId && detectedCatName) {
-      const sysCat = systemCategories.find(c => c.name.toLowerCase() === detectedCatName.toLowerCase());
+    // Prioritize category resolved during preview
+    let finalCategoryName = row.inferredCategoryName || detectedCatName;
+    let finalCategoryId: string | null = null;
+
+    if (row.inferredCategoryName) {
+      const sysCat = allCategories.find(c => c.is_system && c.name.toLowerCase() === row.inferredCategoryName!.toLowerCase());
       if (sysCat) {
         finalCategoryId = sysCat.id;
+        finalCategoryName = sysCat.name;
       }
     }
+
+    if (!finalCategoryId) {
+      finalCategoryId = detectedCatId;
+      if (!finalCategoryId && detectedCatName) {
+        const sysCat = allCategories.find(c => c.is_system && c.name.toLowerCase() === detectedCatName.toLowerCase());
+        if (sysCat) {
+          finalCategoryId = sysCat.id;
+          finalCategoryName = sysCat.name;
+        }
+      } else if (finalCategoryId) {
+        const sysCat = allCategories.find(c => c.id === finalCategoryId);
+        if (sysCat) {
+          finalCategoryName = sysCat.name;
+        }
+      }
+    }
+
+    // Look up the category's type from our fetched allCategories list
+    const matchedCategory = allCategories.find(c => c.id === finalCategoryId);
+    const userCategoryType = matchedCategory?.type ?? undefined;
+    
+    // 2. CLASSIFICATION ENGINE
+    const mapping = preview.columnMapping;
+    const rawDebit = mapping.debitColumn ? row.rawData[mapping.debitColumn] : undefined;
+    const rawCredit = mapping.creditColumn ? row.rawData[mapping.creditColumn] : undefined;
+    const rawDir = mapping.transactionDirectionColumn ? row.rawData[mapping.transactionDirectionColumn] : undefined;
+    const rawCategoryHint = mapping.categoryHintColumn ? row.rawData[mapping.categoryHintColumn] : undefined;
+
+    const context: ClassificationContext = {
+      amount:                 row.amount         ? parseFloat(String(row.amount).replace(/[,$\s]/g, ''))         : undefined,
+      debit_amount:           rawDebit           ? parseFloat(String(rawDebit).replace(/[,$\s]/g, ''))           : undefined,
+      credit_amount:          rawCredit          ? parseFloat(String(rawCredit).replace(/[,$\s]/g, ''))          : undefined,
+      transaction_direction:  (rawDir as string) ?? undefined,
+      merchant_name:          merchant ?? rawDesc ?? undefined,
+      category_hint:          (rawCategoryHint as string) ?? undefined,
+      user_category_type:     userCategoryType,
+    };
+
+    const classification = deriveFinalType(context);
+    
+    // Respect explicit manual user override from the preview grid!
+    const finalType = row.user_override ?? (classification.final_type as 'income' | 'expense' | 'transfer' | 'investment' | 'refund' | 'needs_review');
+    const confidence = row.user_override ? 'high' : classification.confidence;
+    const classificationReason = row.user_override 
+      ? `User manual override to ${row.user_override}` 
+      : classification.reason;
+    
+    const rawAmountForNorm = row.amount ?? context.debit_amount ?? context.credit_amount ?? 0;
+    const signedAmount = normalizeAmount(rawAmountForNorm, finalType);
 
     const tx = {
       user_id: userId,
@@ -130,19 +182,26 @@ export async function commitImportBatch(
       date: row.date,
       description: rawDesc,
       merchant,
-      amount,
-      direction,
-      type,
+      amount: signedAmount, // Normalized amount
+      type: finalType,
+      direction: (finalType === 'income' || finalType === 'refund') ? 'credit' : (finalType === 'transfer') ? 'internal' : 'debit',
+      is_transfer: finalType === 'transfer',
+      is_investment: finalType === 'investment',
       category_id: finalCategoryId,
-      is_transfer: type === 'transfer',
-      is_investment: type === 'investment',
+      transfer_pair_id: null,
       source: 'import',
       confidence,
+      notes: classificationReason,
     };
+    
+    if (finalType === 'needs_review') {
+      reviewQueue.push(tx);
+      continue;
+    }
     
     transactionsToInsert.push(tx);
     
-    if (tx.is_transfer && confidence === 'high') {
+    if (finalType === 'transfer' && confidence === 'high') {
       transferCandidates.push(tx);
     }
   }
@@ -276,7 +335,7 @@ export async function checkDuplicates(accountId: string, rows: ParsedRow[]): Pro
   if (!data || data.length === 0) return [];
 
   const existingSet = new Set(
-    data.map(t => `${t.date}|${Number(t.amount).toFixed(2)}|${t.merchant}|${t.description}`)
+    data.map(t => `${t.date}|${Math.abs(Number(t.amount)).toFixed(2)}|${t.merchant}|${t.description}`)
   );
 
   const duplicateIndices: number[] = [];
@@ -289,7 +348,7 @@ export async function checkDuplicates(accountId: string, rows: ParsedRow[]): Pro
     const merchant = cleanMerchant(rawDesc);
     const amount = row.amount || 0;
     
-    const dupKey = `${row.date}|${amount.toFixed(2)}|${merchant}|${rawDesc}`;
+    const dupKey = `${row.date}|${Math.abs(amount).toFixed(2)}|${merchant}|${rawDesc}`;
     
     if (existingSet.has(dupKey) || currentSet.has(dupKey)) {
       duplicateIndices.push(index);

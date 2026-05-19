@@ -78,7 +78,23 @@ export async function getTransactions(from?: string, to?: string): Promise<Trans
   }
 
   const { data } = await query;
-  return (data || []) as Transaction[];
+  const mapped = (data || []).map((t: any) => {
+    let final_type: 'income' | 'expense' | 'transfer' | 'investment' | 'refund' = 'expense';
+    if (t.is_transfer === true || t.type === 'transfer') final_type = 'transfer';
+    else if (t.is_investment === true || t.type === 'investment') final_type = 'investment';
+    else if (t.type === 'income') final_type = 'income';
+    else if (t.type === 'refund') final_type = 'refund';
+    else if (t.type === 'expense') final_type = 'expense';
+    else if (t.direction === 'credit') final_type = 'income';
+    else if (t.direction === 'debit') final_type = 'expense';
+    else final_type = 'expense';
+    return {
+      ...t,
+      final_type,
+    };
+  });
+
+  return mapped as Transaction[];
 }
 
 export async function getCategories(): Promise<Category[]> {
@@ -182,10 +198,14 @@ export async function updateTransactionCategory(transactionId: string, categoryI
   if (isDemo) {
     const txIndex = inMemoryDemoTransactions.findIndex(t => t.id === transactionId);
     if (txIndex !== -1) {
-      inMemoryDemoTransactions[txIndex] = { ...inMemoryDemoTransactions[txIndex], category_id: categoryId };
-      // Also update the nested category object for the UI
+      // Only update the category fields. final_type, amount
+      // are set at import time and remain immutable unless the transaction is re-imported.
       const cat = inMemoryDemoCategories.find(c => c.id === categoryId);
-      inMemoryDemoTransactions[txIndex].category = cat as any;
+      inMemoryDemoTransactions[txIndex] = {
+        ...inMemoryDemoTransactions[txIndex],
+        category_id: categoryId,
+        category: cat as any,
+      };
     }
     return;
   }
@@ -194,6 +214,9 @@ export async function updateTransactionCategory(transactionId: string, categoryI
   if (!user) throw new Error('Unauthorized');
 
   const supabase = await createClient();
+
+  // Only update category_id. final_type, amount
+  // are fixed at import time and must not be mutated by a category change.
   const { error } = await supabase
     .from('transactions')
     .update({ category_id: categoryId })

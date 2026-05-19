@@ -148,9 +148,60 @@ export default function ImportPreviewUI({
 
   const { acceptedRows, skippedRows, headers, duplicateCount } = localPreview;
 
-  // Calculate estimated totals
-  const estimatedIncome = acceptedRows.filter(r => (r.amount || 0) > 0).reduce((sum, r) => sum + (r.amount || 0), 0);
-  const estimatedExpense = acceptedRows.filter(r => (r.amount || 0) < 0).reduce((sum, r) => sum + Math.abs(r.amount || 0), 0);
+  // Calculate estimated totals using classification results
+  const classifiedAcceptedRows = React.useMemo(() => {
+    return acceptedRows.map((row) => {
+      const rawDebit = mapping.debitColumn ? row.rawData[mapping.debitColumn] : undefined;
+      const rawCredit = mapping.creditColumn ? row.rawData[mapping.creditColumn] : undefined;
+      const rawDir = mapping.transactionDirectionColumn ? row.rawData[mapping.transactionDirectionColumn] : undefined;
+      const rawCategoryHint = mapping.categoryHintColumn ? row.rawData[mapping.categoryHintColumn] : undefined;
+
+      const cleanMerchantName = row.description ? cleanMerchant(row.description) : undefined;
+
+      let matchedCategoryType: 'expense_only' | 'income_only' | 'mixed' | undefined = undefined;
+      if (row.inferredCategoryName) {
+        const cat = categories.find(c => c.name.toLowerCase() === row.inferredCategoryName!.toLowerCase());
+        if (cat) {
+          matchedCategoryType = cat.type;
+        }
+      }
+
+      const context: ClassificationContext = {
+        amount: row.amount ?? undefined,
+        debit_amount: rawDebit ? parseFloat(String(rawDebit).replace(/[,$\s]/g, '')) : undefined,
+        credit_amount: rawCredit ? parseFloat(String(rawCredit).replace(/[,$\s]/g, '')) : undefined,
+        transaction_direction: rawDir ?? undefined,
+        merchant_name: cleanMerchantName ?? row.description ?? undefined,
+        category_hint: rawCategoryHint ?? undefined,
+        user_category_type: matchedCategoryType
+      };
+
+      const result = deriveFinalType(context);
+      const finalType = row.user_override ?? result.final_type;
+      const rawAmountForNorm = row.amount ?? context.debit_amount ?? context.credit_amount ?? 0;
+      
+      return {
+        ...row,
+        final_type: finalType,
+        signed_amount: normalizeAmount(rawAmountForNorm, finalType),
+        confidence: row.user_override ? 'high' : result.confidence,
+        classification_reason: row.user_override ? `User manual override to ${row.user_override}` : result.classification_reason
+      };
+    });
+  }, [acceptedRows, mapping, categories]);
+
+  const estimatedIncome = React.useMemo(() => {
+    return classifiedAcceptedRows
+      .filter(r => r.final_type === 'income' || r.final_type === 'refund')
+      .reduce((sum, r) => sum + Math.abs(r.signed_amount), 0);
+  }, [classifiedAcceptedRows]);
+
+  const estimatedExpense = React.useMemo(() => {
+    return classifiedAcceptedRows
+      .filter(r => r.final_type === 'expense')
+      .reduce((sum, r) => sum + Math.abs(r.signed_amount), 0);
+  }, [classifiedAcceptedRows]);
+
   const estimatedNet = estimatedIncome - estimatedExpense;
 
   const handleSelectChange = (key: keyof ColumnMapping, val: string) => {
@@ -398,7 +449,7 @@ export default function ImportPreviewUI({
                     </tr>
                   ))}
                   
-                  {acceptedRows.slice(0, 10).map((row, i) => (
+                  {classifiedAcceptedRows.slice(0, 10).map((row, i) => (
                     <tr key={`acc-${i}`} style={{ borderBottom: '1px solid var(--color-border)' }}>
                       <td style={{ padding: '0.75rem 1rem', color: 'var(--color-text-muted)' }}>{row.rowIndex}</td>
                       <td style={{ padding: '0.75rem 1rem' }}>{row.date}</td>
@@ -408,11 +459,20 @@ export default function ImportPreviewUI({
                           {row.inferredCategoryName || 'Uncategorized'}
                         </span>
                         <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-secondary)', marginLeft: '0.25rem' }}>
-                          ({row.inferredCategoryType || 'expense'})
+                          ({row.final_type || 'expense'})
                         </span>
                       </td>
-                      <td style={{ padding: '0.75rem 1rem', textAlign: 'right', color: row.amount! >= 0 ? 'var(--color-success)' : 'inherit' }}>
-                        {row.amount! >= 0 ? '+' : ''}{row.amount!.toFixed(2)}
+                      <td style={{ 
+                        padding: '0.75rem 1rem', 
+                        textAlign: 'right', 
+                        fontWeight: 600,
+                        color: row.final_type === 'income' || row.final_type === 'refund' 
+                          ? 'var(--color-success)' 
+                          : row.final_type === 'expense' 
+                          ? 'var(--color-danger)' 
+                          : 'inherit' 
+                      }}>
+                        {row.signed_amount >= 0 ? '+' : ''}{row.signed_amount.toFixed(2)}
                       </td>
                       <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}><Badge variant="success">OK</Badge></td>
                     </tr>

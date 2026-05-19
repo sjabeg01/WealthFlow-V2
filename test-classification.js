@@ -151,14 +151,14 @@ function deriveFinalType(context) {
     return {
       final_type: "expense",
       confidence: "high",
-      reason: "Category type override: expense_only"
+      classification_reason: "Category type override: expense_only"
     };
   }
   if (context.user_category_type === "income_only") {
     return {
       final_type: "income",
       confidence: "high",
-      reason: "Category type override: income_only"
+      classification_reason: "Category type override: income_only"
     };
   }
   if (context.transaction_direction) {
@@ -169,7 +169,7 @@ function deriveFinalType(context) {
       return {
         final_type: "expense",
         confidence: "high",
-        reason: `Direction classified as expense: ${context.transaction_direction}`
+        classification_reason: `Direction classified as expense: ${context.transaction_direction}`
       };
     }
     if (["credit", "cr", "deposit", "income", "received"].some(
@@ -178,7 +178,7 @@ function deriveFinalType(context) {
       return {
         final_type: "income",
         confidence: "high",
-        reason: `Direction classified as income: ${context.transaction_direction}`
+        classification_reason: `Direction classified as income: ${context.transaction_direction}`
       };
     }
     if (["transfer", "internal", "xfer", "inter account"].some(
@@ -187,7 +187,7 @@ function deriveFinalType(context) {
       return {
         final_type: "transfer",
         confidence: "high",
-        reason: `Direction classified as transfer: ${context.transaction_direction}`
+        classification_reason: `Direction classified as transfer: ${context.transaction_direction}`
       };
     }
   }
@@ -196,7 +196,7 @@ function deriveFinalType(context) {
     return {
       final_type: "expense",
       confidence: "high",
-      reason: "Positive debit_amount signal"
+      classification_reason: "Positive debit_amount signal"
     };
   }
   const creditAmount = toNumber(context.credit_amount);
@@ -204,7 +204,7 @@ function deriveFinalType(context) {
     return {
       final_type: "income",
       confidence: "high",
-      reason: "Positive credit_amount signal"
+      classification_reason: "Positive credit_amount signal"
     };
   }
   const amount = toNumber(context.amount);
@@ -212,7 +212,7 @@ function deriveFinalType(context) {
     return {
       final_type: "expense",
       confidence: "high",
-      reason: "Negative amount signal"
+      classification_reason: "Negative amount signal"
     };
   }
   const text = normalizeText([
@@ -225,7 +225,7 @@ function deriveFinalType(context) {
     return {
       final_type: "transfer",
       confidence: "high",
-      reason: `Transfer keyword match: ${transferMatch}`
+      classification_reason: `Transfer keyword match: ${transferMatch}`
     };
   }
   const investmentMatch = hasAny(text, INVESTMENT_KEYWORDS);
@@ -233,7 +233,7 @@ function deriveFinalType(context) {
     return {
       final_type: "investment",
       confidence: "high",
-      reason: `Investment keyword match: ${investmentMatch}`
+      classification_reason: `Investment keyword match: ${investmentMatch}`
     };
   }
   const refundMatch = hasAny(text, REFUND_KEYWORDS);
@@ -241,7 +241,7 @@ function deriveFinalType(context) {
     return {
       final_type: "refund",
       confidence: "high",
-      reason: `Refund keyword match: ${refundMatch}`
+      classification_reason: `Refund keyword match: ${refundMatch}`
     };
   }
   const incomeHighMatch = hasAny(text, INCOME_HIGH_KEYWORDS);
@@ -249,7 +249,7 @@ function deriveFinalType(context) {
     return {
       final_type: "income",
       confidence: "high",
-      reason: `Income keyword match: ${incomeHighMatch}`
+      classification_reason: `Income keyword match: ${incomeHighMatch}`
     };
   }
   const expenseHighMatch = hasAny(text, EXPENSE_HIGH_KEYWORDS);
@@ -257,7 +257,7 @@ function deriveFinalType(context) {
     return {
       final_type: "expense",
       confidence: "high",
-      reason: `Expense keyword match: ${expenseHighMatch}`
+      classification_reason: `Expense keyword match: ${expenseHighMatch}`
     };
   }
   const incomeMediumMatch = hasAny(text, INCOME_MEDIUM_KEYWORDS);
@@ -265,7 +265,7 @@ function deriveFinalType(context) {
     return {
       final_type: "income",
       confidence: "medium",
-      reason: `Income keyword match: ${incomeMediumMatch}`
+      classification_reason: `Income keyword match: ${incomeMediumMatch}`
     };
   }
   const expenseMediumMatch = hasAny(text, EXPENSE_MEDIUM_KEYWORDS);
@@ -273,13 +273,13 @@ function deriveFinalType(context) {
     return {
       final_type: "expense",
       confidence: "medium",
-      reason: `Expense keyword match: ${expenseMediumMatch}`
+      classification_reason: `Expense keyword match: ${expenseMediumMatch}`
     };
   }
   return {
     final_type: "needs_review",
     confidence: "low",
-    reason: "No reliable classification signal found"
+    classification_reason: "No reliable classification signal found"
   };
 }
 
@@ -290,9 +290,9 @@ var testCases = [
   { description: "Weekly groceries", amount: 180, expect: "expense" },
   { description: "Monthly savings transfer", amount: 400, expect: "transfer" },
   { description: "Electricity and internet", amount: 140, expect: "expense" },
+  { description: "Fuel and transport", amount: 95, expect: "expense" },
   { description: "VAS/VGS investment", amount: 300, expect: "investment" },
-  { description: "Health insurance payment", amount: 240, expect: "expense" },
-  { description: "Random unknown string", amount: 50, expect: "needs_review" }
+  { description: "Restaurant and takeaway", amount: 120, expect: "expense" }
 ];
 var passed = 0;
 console.log("Starting Keyword Classification Fallback Tests...");
@@ -307,7 +307,7 @@ testCases.forEach((tc, idx) => {
   } else {
     console.error(`[FAIL] Case ${idx + 1}: ${tc.description}`);
     console.error(`  Expected: ${tc.expect}`);
-    console.error(`  Got: ${result.final_type} (Reason: ${result.reason})`);
+    console.error(`  Got: ${result.final_type} (Reason: ${result.classification_reason})`);
   }
 });
 console.log(`

@@ -33,8 +33,8 @@ export async function processTransferPairing(userId: string) {
       // - different owned accounts
       if (txA.account_id === txB.account_id) continue;
       
-      // - opposite direction
-      if (txA.direction === txB.direction) continue;
+      // - opposite sign
+      if (Math.sign(Number(txA.amount)) === Math.sign(Number(txB.amount))) continue;
 
       // - exact amount match (comparing absolute values)
       if (Math.abs(Number(txA.amount)) !== Math.abs(Number(txB.amount))) continue;

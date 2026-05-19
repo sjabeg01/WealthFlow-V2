@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import ImportClient from './ImportClient';
-import { getAccounts } from '@/lib/dataService';
+import { getAccounts, getCategories } from '@/lib/dataService';
 
 export const metadata: Metadata = {
   title: 'Import Transactions | Rakam',
@@ -8,6 +8,7 @@ export const metadata: Metadata = {
 
 export default async function ImportPage() {
   const accounts = await getAccounts();
+  const categories = await getCategories();
 
-  return <ImportClient initialAccounts={accounts} />;
+  return <ImportClient initialAccounts={accounts} categories={categories} />;
 }

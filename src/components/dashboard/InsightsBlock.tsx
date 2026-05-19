@@ -30,7 +30,7 @@ export default function InsightsBlock({ transactions, goals }: InsightsBlockProp
   const topMerchant = topMerchants.length > 0 ? topMerchants[0] : null;
 
   // Insight 3: Transfers excluded
-  const transfersCount = transactions.filter(t => t.is_transfer).length;
+  const transfersCount = transactions.filter(t => t.final_type === 'transfer').length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

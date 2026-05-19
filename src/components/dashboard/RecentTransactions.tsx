@@ -5,6 +5,41 @@ import { formatCurrency } from '@/lib/financeEngine';
 import Badge from '@/components/ui/Badge';
 import Link from 'next/link';
 
+function formatAmount(amount: number, finalType: string): string {
+  const abs = Math.abs(amount);
+  const formatted = abs.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+
+  switch (finalType) {
+    case 'expense':
+      return `-${formatted}`;
+    case 'income':
+      return `+${formatted}`;
+    case 'refund':
+      return `+${formatted}`;
+    case 'transfer':
+      return formatted;
+    default:
+      return formatted;
+  }
+}
+
+function getAmountColor(finalType: string): string {
+  switch (finalType) {
+    case 'expense':
+      return 'var(--color-danger)';
+    case 'income':
+    case 'refund':
+      return 'var(--color-success)';
+    case 'transfer':
+      return 'var(--color-muted)';
+    default:
+      return 'var(--color-muted)';
+  }
+}
+
 interface RecentTransactionsProps {
   transactions: Transaction[];
 }
@@ -21,11 +56,13 @@ export default function RecentTransactions({ transactions }: RecentTransactionsP
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
       {transactions.map((tx, index) => {
-        const isIncome = tx.direction === 'credit';
+        const isIncome = tx.final_type === 'income' || tx.final_type === 'refund';
         let badge = null;
-        if (tx.is_transfer) {
+        if (tx.final_type === 'transfer') {
           badge = <Badge variant="info" style={{ marginLeft: '0.5rem' }}>Transfer</Badge>;
-        } else if (tx.type === 'refund') {
+        } else if (tx.final_type === 'investment') {
+          badge = <Badge variant="warning" style={{ marginLeft: '0.5rem' }}>Investment</Badge>;
+        } else if (tx.final_type === 'refund') {
           badge = <Badge variant="success" style={{ marginLeft: '0.5rem' }}>Refund</Badge>;
         }
 
@@ -49,8 +86,8 @@ export default function RecentTransactions({ transactions }: RecentTransactionsP
               </div>
             </div>
             
-            <div style={{ fontWeight: 600, fontSize: '0.875rem', color: isIncome ? 'var(--color-success)' : 'var(--color-text)' }}>
-              {isIncome ? '+' : ''}{formatCurrency(Math.abs(tx.amount), 'AUD')}
+            <div style={{ fontWeight: 600, fontSize: '0.875rem', color: getAmountColor(tx.final_type) }}>
+              {formatAmount(tx.amount, tx.final_type)}
             </div>
           </div>
         );

@@ -84,8 +84,7 @@ function tx(
   merchant: string,
   amount: number,
   catId: string,
-  type: Transaction['type'] = 'expense',
-  isTransfer = false
+  final_type: Transaction['final_type'] = 'expense'
 ): Transaction {
   return {
     id,
@@ -96,12 +95,9 @@ function tx(
     description,
     merchant,
     amount,
-    direction: amount >= 0 ? 'credit' : 'debit',
-    type,
+    final_type,
     category_id: catId,
     category: catMap[catId],
-    is_transfer: isTransfer,
-    is_investment: type === 'investment',
     transfer_pair_id: null,
     source: 'import',
     confidence: 'high',
@@ -133,7 +129,7 @@ export const DEMO_TRANSACTIONS: Transaction[] = [
   tx('dt-019', '2026-04-20', 'Woolworths Paddington', 'Woolworths', -95.20, 'cat-1'),
   tx('dt-020', '2026-04-21', 'Freelance - Web project', 'Client', 1200.00, 'cat-9', 'income'),
   tx('dt-021', '2026-04-22', 'Coffee - Market Lane', 'Market Lane', -8.50, 'cat-2'),
-  tx('dt-022', '2026-04-23', 'Transfer to Savings', 'Transfer', -500.00, 'cat-11', 'transfer', true),
+  tx('dt-022', '2026-04-23', 'Transfer to Savings', 'Transfer', -500.00, 'cat-11', 'transfer'),
 
   // March 2026
   tx('dt-101', '2026-03-01', 'Salary - Acme Corp', 'Acme Corp', 7200.00, 'cat-9', 'income'),
@@ -150,7 +146,7 @@ export const DEMO_TRANSACTIONS: Transaction[] = [
   tx('dt-112', '2026-03-20', 'Amazon Prime', 'Amazon', -9.99, 'cat-7'),
   tx('dt-113', '2026-03-22', 'Spotify Premium', 'Spotify', -12.99, 'cat-7'),
   tx('dt-114', '2026-03-25', 'Refund - Amazon Return', 'Amazon', 42.99, 'cat-8', 'refund'),
-  tx('dt-115', '2026-03-28', 'Transfer to Savings', 'Transfer', -500.00, 'cat-11', 'transfer', true),
+  tx('dt-115', '2026-03-28', 'Transfer to Savings', 'Transfer', -500.00, 'cat-11', 'transfer'),
 
   // February 2026
   tx('dt-201', '2026-02-01', 'Salary - Acme Corp', 'Acme Corp', 7200.00, 'cat-9', 'income'),
@@ -165,7 +161,7 @@ export const DEMO_TRANSACTIONS: Transaction[] = [
   tx('dt-210', '2026-02-20', 'Bupa Health Insurance', 'Bupa', -132.00, 'cat-6'),
   tx('dt-211', '2026-02-22', 'Freelance - Design work', 'Client', 800.00, 'cat-9', 'income'),
   tx('dt-212', '2026-02-25', 'AGL Electricity Bill', 'AGL', -161.40, 'cat-5'),
-  tx('dt-213', '2026-02-26', 'Transfer to Savings', 'Transfer', -500.00, 'cat-11', 'transfer', true),
+  tx('dt-213', '2026-02-26', 'Transfer to Savings', 'Transfer', -500.00, 'cat-11', 'transfer'),
 
 ];
 

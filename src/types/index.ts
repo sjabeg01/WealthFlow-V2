@@ -40,13 +40,13 @@ export interface Category {
   color: string | null;
   icon: string | null;
   is_system: boolean;
+  type?: 'expense_only' | 'income_only' | 'mixed';
   created_at: string;
 }
 
 // ------ Transactions ------
 
-export type TransactionDirection = 'credit' | 'debit';
-export type TransactionType = 'income' | 'expense' | 'transfer' | 'investment' | 'refund';
+export type FinalType = 'income' | 'expense' | 'transfer' | 'investment' | 'refund';
 export type TransactionSource = 'import' | 'manual';
 export type TransactionConfidence = 'high' | 'medium' | 'low';
 
@@ -58,13 +58,10 @@ export interface Transaction {
   date: string; // ISO date string YYYY-MM-DD
   description: string;
   merchant: string | null;
-  amount: number; // signed: positive = income, negative = expense
-  direction: TransactionDirection;
-  type: TransactionType;
+  amount: number; // raw imported amount
+  final_type: FinalType; // Single source of truth for financial meaning
   category_id: string | null;
   category?: Category; // joined
-  is_transfer: boolean;
-  is_investment: boolean;
   transfer_pair_id: string | null;
   source: TransactionSource;
   confidence: TransactionConfidence;
@@ -112,6 +109,9 @@ export interface ParsedRow {
   description: string | null;
   amount: number | null;
   rawData: Record<string, string>;
+  inferredCategoryName?: string | null;
+  inferredCategoryType?: string | null;
+  user_override?: FinalType | 'needs_review';
 }
 
 export interface ColumnMapping {
@@ -120,7 +120,11 @@ export interface ColumnMapping {
   amountColumn: string | null;
   debitColumn: string | null;
   creditColumn: string | null;
+  transactionDirectionColumn?: string | null;
   balanceColumn: string | null;
+  categoryColumn?: string | null;
+  categoryHintColumn?: string | null;
+  accountColumn?: string | null;
 }
 
 export interface ColumnMappingConfidence {

@@ -4,8 +4,7 @@
 // ============================================================
 
 import type {
-  TransactionDirection,
-  TransactionType,
+  FinalType,
   TransactionConfidence,
 } from '@/types';
 
@@ -178,67 +177,43 @@ export function isLikelyInvestment(description: string): boolean {
 }
 
 // -----------------------------------------------
-// Direction & type inference
+// Final Type Classification (Single Source of Truth)
 // -----------------------------------------------
 
 /**
- * Determine transaction direction from amount.
- * In a signed model: positive = credit (income), negative = debit (expense).
+ * Determine final_type from keyword rules and amount direction.
+ * Category must never influence this classification.
  */
-export function inferDirection(amount: number): TransactionDirection {
-  return amount >= 0 ? 'credit' : 'debit';
-}
-
-/**
- * Determine transaction type from direction + description context.
- * This is a best-effort suggestion — users review and can override.
- */
-export function inferType(
+export function classifyFinalType(
   amount: number,
   description: string,
   merchant?: string | null
-): { type: TransactionType; confidence: TransactionConfidence } {
-  const direction = inferDirection(amount);
+): { finalType: FinalType; confidence: TransactionConfidence } {
+  const text = `${description} ${merchant ?? ''}`.toLowerCase();
 
-  if (isLikelyTransfer(description)) {
-    return { type: 'transfer', confidence: 'medium' };
+  // 1. Keyword rules
+  if (isLikelyTransfer(text)) {
+    return { finalType: 'transfer', confidence: 'medium' };
   }
 
-  if (isLikelyInvestment(description)) {
-    return { type: 'investment', confidence: 'medium' };
+  if (isLikelyInvestment(text)) {
+    return { finalType: 'investment', confidence: 'medium' };
   }
 
-  if (direction === 'credit') {
-    const text = `${description} ${merchant ?? ''}`;
-    if (/\b(salary|payroll|wages|pay)\b/i.test(text)) {
-      return { type: 'income', confidence: 'high' };
+  // 2. Amount direction heuristics
+  if (amount >= 0) {
+    if (/\b(salary|payroll|wages|pay|refund|return|reversal|credit back)\b/i.test(text)) {
+      return { finalType: 'income', confidence: 'high' };
     }
-    // High confidence refund detection
-    if (/\b(refund|return|reversal|credit back)\b/i.test(text)) {
-      return { type: 'refund', confidence: 'high' };
-    }
-    return { type: 'income', confidence: 'medium' };
+    return { finalType: 'income', confidence: 'medium' };
   }
 
-  return { type: 'expense', confidence: 'high' };
+  return { finalType: 'expense', confidence: 'high' };
 }
 
 // -----------------------------------------------
 // Date parsing
 // -----------------------------------------------
-
-const DATE_FORMATS = [
-  // ISO
-  /^(\d{4})-(\d{2})-(\d{2})$/,
-  // DD/MM/YYYY (AU standard)
-  /^(\d{2})\/(\d{2})\/(\d{4})$/,
-  // MM/DD/YYYY (US)
-  /^(\d{2})\/(\d{2})\/(\d{4})$/,
-  // DD-MM-YYYY
-  /^(\d{2})-(\d{2})-(\d{4})$/,
-  // DD MMM YYYY (e.g. 01 Jan 2024)
-  /^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$/,
-];
 
 const MONTH_NAMES: Record<string, string> = {
   jan: '01', feb: '02', mar: '03', apr: '04',
@@ -249,16 +224,33 @@ const MONTH_NAMES: Record<string, string> = {
 /** Parse a date string into ISO YYYY-MM-DD format. Returns null if unparseable. Supports an optional preference to resolve ambiguous D/M/Y vs M/D/Y. */
 export function parseDate(raw: string, formatPreference?: 'US' | 'AU'): string | null {
   if (!raw) return null;
-  const str = raw.trim();
+  let str = raw.trim();
 
-  // Try ISO first
+  // Strip time part if present
+  if (str.includes(':')) {
+    const parts = str.split(/[\sT]+/);
+    if (parts.length > 0) {
+      str = parts[0];
+    }
+  }
+
+  // Normalize separators: convert dots, slashes, spaces to hyphens
+  str = str.replace(/[./\s]+/g, '-');
+
+  // 1. Try ISO YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
 
-  // D/M/YYYY or DD/MM/YYYY or D/M/YY
-  const ddmmyyyy = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
-  if (ddmmyyyy) {
-    let [, p1, p2, yyyy] = ddmmyyyy;
-    // Handle 2-digit years
+  // 2. Try YYYY-M-D (e.g. 2024-1-15 or 2024-01-05)
+  const yyyymd = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (yyyymd) {
+    const [, yyyy, mm, dd] = yyyymd;
+    return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+  }
+
+  // 3. Try D-M-Y or M-D-Y
+  const dmy = str.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/);
+  if (dmy) {
+    let [, p1, p2, yyyy] = dmy;
     if (yyyy.length === 2) {
       yyyy = parseInt(yyyy) > 50 ? `19${yyyy}` : `20${yyyy}`;
     }
@@ -266,58 +258,66 @@ export function parseDate(raw: string, formatPreference?: 'US' | 'AU'): string |
     const n1 = parseInt(p1);
     const n2 = parseInt(p2);
 
-    // If one is clearly > 12, it must be the day, so other is month.
     if (n1 > 12 && n2 <= 12) {
-      // Must be DD/MM/YYYY (AU)
       return `${yyyy}-${p2.padStart(2, '0')}-${p1.padStart(2, '0')}`;
     }
     if (n2 > 12 && n1 <= 12) {
-      // Must be MM/DD/YYYY (US)
       return `${yyyy}-${p1.padStart(2, '0')}-${p2.padStart(2, '0')}`;
     }
 
-    // Both are <= 12 (ambiguous). Rely on preference.
     if (formatPreference === 'US') {
       return `${yyyy}-${p1.padStart(2, '0')}-${p2.padStart(2, '0')}`;
     } else {
-      // Default to AU: DD/MM/YYYY
       return `${yyyy}-${p2.padStart(2, '0')}-${p1.padStart(2, '0')}`;
     }
   }
 
-  // DD-MM-YYYY
-  const ddmmyyyy2 = str.match(/^(\d{2})-(\d{2})-(\d{4})$/);
-  if (ddmmyyyy2) {
-    const [, dd, mm, yyyy] = ddmmyyyy2;
-    return `${yyyy}-${mm}-${dd}`;
+  // 4. Try DD-MMM-YY or DD-MMM-YYYY (e.g. 15-Jan-24 or 15-Jan-2024)
+  const dmmm = str.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$/);
+  if (dmmm) {
+    let [, dd, mon, yyyy] = dmmm;
+    if (yyyy.length === 2) {
+      yyyy = parseInt(yyyy) > 50 ? `19${yyyy}` : `20${yyyy}`;
+    }
+    const mm = MONTH_NAMES[mon.toLowerCase()];
+    if (mm) {
+      return `${yyyy}-${mm}-${dd.padStart(2, '0')}`;
+    }
   }
 
-  // DD MMM YYYY
-  const ddmonth = str.match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$/);
-  if (ddmonth) {
-    const [, dd, mon, yyyy] = ddmonth;
-    const mm = MONTH_NAMES[mon.toLowerCase()];
-    if (mm) return `${yyyy}-${mm}-${dd.padStart(2, '0')}`;
+  // 5. Try YYYYMMDD raw number
+  const yyyymmdd = str.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if (yyyymmdd) {
+    const [, yyyy, mm, dd] = yyyymmdd;
+    return `${yyyy}-${mm}-${dd}`;
   }
 
   return null;
 }
 
-/** Parse an amount string to a number. Handles commas, currency symbols, brackets for negatives. */
+/** Parse an amount string to a number. Handles commas, currency symbols, brackets for negatives, trailing minus. */
 export function parseAmount(raw: string, isDebit = false): number | null {
   if (!raw) return null;
 
   let str = raw.trim();
+  if (str === '') return null;
 
-  // Brackets = negative (common in bank statements)
+  // Check if negative
   const isBracketed = /^\(.*\)$/.test(str);
-  str = str.replace(/[()$£€AUD,\s]/g, '');
+  const isNegative = str.startsWith('-') || str.endsWith('-') || isBracketed;
+
+  // Clean all characters except digits and decimal point
+  str = str.replace(/[()$£€AUD,\s\-]/g, '');
 
   const num = parseFloat(str);
   if (isNaN(num)) return null;
 
   let result = num;
-  if (isBracketed || isDebit) result = -Math.abs(result);
+  if (isNegative || isDebit) {
+    result = -Math.abs(result);
+  } else {
+    result = Math.abs(result);
+  }
 
   return result;
 }

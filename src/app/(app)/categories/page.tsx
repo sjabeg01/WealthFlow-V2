@@ -3,9 +3,10 @@ import styles from '../app.module.css';
 
 import { parseDateParams } from '@/lib/dateParams';
 import { getByCategory } from '@/lib/financeEngine';
-import { getTransactions, getUserSession } from '@/lib/dataService';
+import { getTransactions, getUserSession, getCategories } from '@/lib/dataService';
 import PeriodSelector from '@/components/shared/PeriodSelector';
 import CategoryList from '@/components/categories/CategoryList';
+import CategorySettings from '@/components/categories/CategorySettings';
 import Card from '@/components/ui/Card';
 
 export const metadata: Metadata = {
@@ -21,8 +22,11 @@ export default async function CategoriesPage(props: { searchParams: SearchParams
   const { user } = await getUserSession();
   if (!user) return null;
 
-  // Fetch transactions using central service
-  const transactions = await getTransactions(from, to);
+  // Fetch transactions and all categories
+  const [transactions, categories] = await Promise.all([
+    getTransactions(from, to),
+    getCategories()
+  ]);
   
   // Calculate breakdown
   const breakdown = getByCategory(transactions);
@@ -39,9 +43,16 @@ export default async function CategoriesPage(props: { searchParams: SearchParams
         <PeriodSelector />
       </div>
 
-      <Card>
-        <CategoryList breakdown={breakdown} />
-      </Card>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
+        <Card>
+          <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--color-border)' }}>
+            <h2 style={{ fontSize: '1.125rem', fontWeight: 600, margin: 0 }}>Spending Breakdown</h2>
+          </div>
+          <CategoryList breakdown={breakdown} />
+        </Card>
+
+        <CategorySettings categories={categories} />
+      </div>
     </div>
   );
 }

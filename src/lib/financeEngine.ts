@@ -24,27 +24,26 @@ import { format } from 'date-fns';
 // Core aggregates
 // -----------------------------------------------
 
-/** Total income: all credits excluding transfers and refunds */
+export function getExpenses(transactions: Transaction[]): number {
+  return transactions
+    .filter(t => t.final_type === 'expense')
+    .reduce((sum, t) => {
+      const amount = parseFloat(String(t.amount));
+      if (isNaN(amount)) return sum;
+      return sum + Math.abs(amount);
+    }, 0);
+}
+
 export function getIncome(transactions: Transaction[]): number {
   return transactions
-    .filter((t) => t.direction === 'credit' && !t.is_transfer && t.type !== 'refund')
-    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    .filter(t => t.final_type === 'income' || t.final_type === 'refund')
+    .reduce((sum, t) => {
+      const amount = parseFloat(String(t.amount));
+      if (isNaN(amount)) return sum;
+      return sum + Math.abs(amount);
+    }, 0);
 }
 
-/** Total expenses: all debits excluding transfers. Refunds reduce spend. */
-export function getExpenses(transactions: Transaction[]): number {
-  const debits = transactions
-    .filter((t) => t.direction === 'debit' && !t.is_transfer && t.type !== 'refund')
-    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-
-  const refunds = transactions
-    .filter((t) => t.type === 'refund')
-    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-
-  return Math.max(0, debits - refunds);
-}
-
-/** Net surplus: income minus expenses */
 export function getSurplus(transactions: Transaction[]): number {
   return getIncome(transactions) - getExpenses(transactions);
 }
@@ -83,16 +82,16 @@ export function getFinanceSummary(
 // Category breakdown
 // -----------------------------------------------
 
-/** Spending grouped by category (expenses only, excluding transfers). Refunds reduce their category totals. */
+/** Spending grouped by category (expenses only). */
 export function getByCategory(
   transactions: Transaction[]
 ): CategoryBreakdown[] {
   const expenseTransactions = transactions.filter(
-    (t) => t.direction === 'debit' && !t.is_transfer && t.type !== 'refund'
+    (t) => t.final_type === 'expense'
   );
 
   const refundTransactions = transactions.filter(
-    (t) => t.type === 'refund'
+    (t) => t.final_type === 'refund'
   );
 
   const totals = new Map<
@@ -219,17 +218,17 @@ export function getTrend(transactions: Transaction[]): TrendData[] {
 // Top merchants
 // -----------------------------------------------
 
-/** Top spending merchants by total, expenses only. Refunds reduce merchant totals. */
+/** Top spending merchants by total, expenses only. */
 export function getTopMerchants(
   transactions: Transaction[],
   limit = 10
 ): MerchantSummary[] {
   const expenseTransactions = transactions.filter(
-    (t) => t.direction === 'debit' && !t.is_transfer && t.type !== 'refund'
+    (t) => t.final_type === 'expense'
   );
 
   const refundTransactions = transactions.filter(
-    (t) => t.type === 'refund'
+    (t) => t.final_type === 'refund'
   );
 
   const totals = new Map<string, { total: number; count: number }>();

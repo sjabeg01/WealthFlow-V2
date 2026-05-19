@@ -4,19 +4,20 @@ import React, { useState, useRef, useEffect } from 'react';
 import Card, { CardHeader } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { UploadCloud, FileType, CheckCircle2 } from 'lucide-react';
-import { processDataGrid } from '@/lib/import/processor';
+import { processDataGrid, reprocessWithMapping } from '@/lib/import/processor';
 import { parseFileToGrid } from '@/lib/import/fileParser';
 import ImportPreviewUI from '@/components/import/ImportPreview';
-import type { ImportPreview, ColumnMapping, Account } from '@/types';
+import type { ImportPreview, ColumnMapping, Account, Category } from '@/types';
 import { commitImportBatch } from './actions';
 import { useRouter } from 'next/navigation';
 import styles from '../app.module.css';
 
 interface ImportClientProps {
   initialAccounts: Account[];
+  categories: Category[];
 }
 
-export default function ImportClient({ initialAccounts }: ImportClientProps) {
+export default function ImportClient({ initialAccounts, categories }: ImportClientProps) {
   const router = useRouter();
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -60,6 +61,39 @@ export default function ImportClient({ initialAccounts }: ImportClientProps) {
     try {
       const { grid, fileType } = await parseFileToGrid(file);
       const result = processDataGrid(grid, file.name, fileType);
+      
+      // Auto-apply saved layout template if it exists and headers match
+      if (typeof window !== 'undefined') {
+        const savedTemplatesStr = localStorage.getItem('rakam_import_templates');
+        if (savedTemplatesStr) {
+          try {
+            const templates = JSON.parse(savedTemplatesStr);
+            const matchingTemplate = templates.find((t: any) => {
+              if (t.headers && t.headers.length === result.headers.length) {
+                return t.headers.every((h: string) => result.headers.includes(h));
+              }
+              return false;
+            });
+            
+            if (matchingTemplate) {
+              result.columnMapping = matchingTemplate.mapping;
+              result.columnMappingConfidence = {
+                dateColumn: 'high',
+                descriptionColumn: 'high',
+                amountColumn: 'high'
+              };
+              const allRows = [...result.acceptedRows, ...result.skippedRows].map(r => r.rawData);
+              const { acceptedRows, skippedRows } = reprocessWithMapping(allRows, matchingTemplate.mapping);
+              result.acceptedRows = acceptedRows;
+              result.skippedRows = skippedRows;
+              result.warnings.push(`Automatically applied matching layout template "${matchingTemplate.name}".`);
+            }
+          } catch (e) {
+            console.error('Failed to load/apply matching template', e);
+          }
+        }
+      }
+      
       setPreview(result);
     } catch (err: any) {
       setError(err.message || 'Error processing file');
@@ -191,6 +225,7 @@ export default function ImportClient({ initialAccounts }: ImportClientProps) {
             onCommit={handleCommit} 
             onCancel={resetState} 
             isCommitting={isCommitting}
+            categories={categories}
           />
         )}
       </div>

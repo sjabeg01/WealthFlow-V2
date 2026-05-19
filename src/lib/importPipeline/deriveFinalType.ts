@@ -248,33 +248,6 @@ export function deriveFinalType(
     }
   }
 
-  const debitAmount = toNumber(context.debit_amount);
-  if (debitAmount !== null && debitAmount > 0) {
-    return {
-      final_type: 'expense',
-      confidence: 'high',
-      classification_reason: 'Positive debit_amount signal',
-    };
-  }
-
-  const creditAmount = toNumber(context.credit_amount);
-  if (creditAmount !== null && creditAmount > 0) {
-    return {
-      final_type: 'income',
-      confidence: 'high',
-      classification_reason: 'Positive credit_amount signal',
-    };
-  }
-
-  const amount = toNumber(context.amount);
-  if (amount !== null && amount < 0) {
-    return {
-      final_type: 'expense',
-      confidence: 'high',
-      classification_reason: 'Negative amount signal',
-    };
-  }
-
   const text = normalizeText([
     context.description,
     context.merchant_name,
@@ -323,6 +296,33 @@ export function deriveFinalType(
       final_type: 'expense',
       confidence: 'high',
       classification_reason: `Expense keyword match: ${expenseHighMatch}`,
+    };
+  }
+
+  const debitAmount = toNumber(context.debit_amount);
+  if (debitAmount !== null && debitAmount > 0) {
+    return {
+      final_type: 'expense',
+      confidence: 'high',
+      classification_reason: 'Positive debit_amount signal',
+    };
+  }
+
+  const creditAmount = toNumber(context.credit_amount);
+  if (creditAmount !== null && creditAmount > 0) {
+    return {
+      final_type: 'income',
+      confidence: 'high',
+      classification_reason: 'Positive credit_amount signal',
+    };
+  }
+
+  const amount = toNumber(context.amount);
+  if (amount !== null && amount < 0) {
+    return {
+      final_type: 'expense',
+      confidence: 'high',
+      classification_reason: 'Negative amount signal',
     };
   }
 

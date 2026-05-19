@@ -36,7 +36,7 @@ export function getExpenses(transactions: Transaction[]): number {
 
 export function getIncome(transactions: Transaction[]): number {
   return transactions
-    .filter(t => t.final_type === 'income' || t.final_type === 'refund')
+    .filter(t => t.final_type === 'income')
     .reduce((sum, t) => {
       const amount = parseFloat(String(t.amount));
       if (isNaN(amount)) return sum;
@@ -45,7 +45,16 @@ export function getIncome(transactions: Transaction[]): number {
 }
 
 export function getSurplus(transactions: Transaction[]): number {
-  return getIncome(transactions) - getExpenses(transactions);
+  const income = getIncome(transactions);
+  const grossExpenses = getExpenses(transactions);
+  const refunds = transactions
+    .filter(t => t.final_type === 'refund')
+    .reduce((sum, t) => {
+      const amount = parseFloat(String(t.amount));
+      if (isNaN(amount)) return sum;
+      return sum + Math.abs(amount);
+    }, 0);
+  return income - (grossExpenses - refunds);
 }
 
 /**
@@ -72,7 +81,7 @@ export function getFinanceSummary(
 ): FinanceSummary {
   const totalIncome = getIncome(transactions);
   const totalExpenses = getExpenses(transactions);
-  const surplus = totalIncome - totalExpenses;
+  const surplus = getSurplus(transactions);
   const safeToInvest = getSafeToInvest(transactions, goals);
 
   return { totalIncome, totalExpenses, surplus, safeToInvest };
@@ -88,10 +97,6 @@ export function getByCategory(
 ): CategoryBreakdown[] {
   const expenseTransactions = transactions.filter(
     (t) => t.final_type === 'expense'
-  );
-
-  const refundTransactions = transactions.filter(
-    (t) => t.final_type === 'refund'
   );
 
   const totals = new Map<
@@ -120,27 +125,6 @@ export function getByCategory(
         categoryName: t.category?.name ?? 'Uncategorized',
         color: t.category?.color ?? '#9E9E9E',
         total: amount,
-        count: 1,
-      });
-    }
-  }
-
-  // Subtract refunds
-  for (const t of refundTransactions) {
-    const key = t.category_id ?? 'uncategorized';
-    const existing = totals.get(key);
-    const amount = Math.abs(t.amount);
-
-    if (existing) {
-      existing.total = Math.max(0, existing.total - amount);
-      existing.count += 1;
-    } else {
-      // If we got a refund but no matching debit, count it as a negative total
-      totals.set(key, {
-        categoryId: t.category_id,
-        categoryName: t.category?.name ?? 'Uncategorized',
-        color: t.category?.color ?? '#9E9E9E',
-        total: -amount,
         count: 1,
       });
     }
@@ -262,7 +246,7 @@ export function getTopMerchants(
   }
 
   return Array.from(totals.entries())
-    .filter(([_, v]) => v.total !== 0)
+    .filter(([_, v]) => v.total > 0)
     .map(([merchant, v]) => ({
       merchant,
       total: v.total,

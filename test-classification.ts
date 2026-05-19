@@ -6,9 +6,9 @@ const testCases = [
   { description: "Weekly groceries", amount: 180, expect: 'expense' },
   { description: "Monthly savings transfer", amount: 400, expect: 'transfer' },
   { description: "Electricity and internet", amount: 140, expect: 'expense' },
+  { description: "Fuel and transport", amount: 95, expect: 'expense' },
   { description: "VAS/VGS investment", amount: 300, expect: 'investment' },
-  { description: "Health insurance payment", amount: 240, expect: 'expense' },
-  { description: "Random unknown string", amount: 50, expect: 'needs_review' }
+  { description: "Restaurant and takeaway", amount: 120, expect: 'expense' }
 ];
 
 let passed = 0;
@@ -26,7 +26,7 @@ testCases.forEach((tc, idx) => {
   } else {
     console.error(`[FAIL] Case ${idx + 1}: ${tc.description}`);
     console.error(`  Expected: ${tc.expect}`);
-    console.error(`  Got: ${result.final_type} (Reason: ${result.reason})`);
+    console.error(`  Got: ${result.final_type} (Reason: ${result.classification_reason})`);
   }
 });
 

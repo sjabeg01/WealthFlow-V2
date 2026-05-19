@@ -22,7 +22,7 @@ export interface ClassificationContext {
 export interface ClassificationResult {
   final_type: FinalType;
   confidence: ConfidenceLevel;
-  reason: string;
+  classification_reason: string;
 }
 
 function toNumber(value: unknown): number | null {
@@ -196,7 +196,7 @@ export function deriveFinalType(
     return {
       final_type: 'expense',
       confidence: 'high',
-      reason: 'Category type override: expense_only',
+      classification_reason: 'Category type override: expense_only',
     };
   }
 
@@ -204,7 +204,7 @@ export function deriveFinalType(
     return {
       final_type: 'income',
       confidence: 'high',
-      reason: 'Category type override: income_only',
+      classification_reason: 'Category type override: income_only',
     };
   }
 
@@ -219,7 +219,7 @@ export function deriveFinalType(
       return {
         final_type: 'expense',
         confidence: 'high',
-        reason: `Direction classified as expense: ${context.transaction_direction}`,
+        classification_reason: `Direction classified as expense: ${context.transaction_direction}`,
       };
     }
 
@@ -231,7 +231,7 @@ export function deriveFinalType(
       return {
         final_type: 'income',
         confidence: 'high',
-        reason: `Direction classified as income: ${context.transaction_direction}`,
+        classification_reason: `Direction classified as income: ${context.transaction_direction}`,
       };
     }
 
@@ -243,7 +243,7 @@ export function deriveFinalType(
       return {
         final_type: 'transfer',
         confidence: 'high',
-        reason: `Direction classified as transfer: ${context.transaction_direction}`,
+        classification_reason: `Direction classified as transfer: ${context.transaction_direction}`,
       };
     }
   }
@@ -253,7 +253,7 @@ export function deriveFinalType(
     return {
       final_type: 'expense',
       confidence: 'high',
-      reason: 'Positive debit_amount signal',
+      classification_reason: 'Positive debit_amount signal',
     };
   }
 
@@ -262,7 +262,7 @@ export function deriveFinalType(
     return {
       final_type: 'income',
       confidence: 'high',
-      reason: 'Positive credit_amount signal',
+      classification_reason: 'Positive credit_amount signal',
     };
   }
 
@@ -271,7 +271,7 @@ export function deriveFinalType(
     return {
       final_type: 'expense',
       confidence: 'high',
-      reason: 'Negative amount signal',
+      classification_reason: 'Negative amount signal',
     };
   }
 
@@ -286,7 +286,7 @@ export function deriveFinalType(
     return {
       final_type: 'transfer',
       confidence: 'high',
-      reason: `Transfer keyword match: ${transferMatch}`,
+      classification_reason: `Transfer keyword match: ${transferMatch}`,
     };
   }
 
@@ -295,7 +295,7 @@ export function deriveFinalType(
     return {
       final_type: 'investment',
       confidence: 'high',
-      reason: `Investment keyword match: ${investmentMatch}`,
+      classification_reason: `Investment keyword match: ${investmentMatch}`,
     };
   }
 
@@ -304,7 +304,7 @@ export function deriveFinalType(
     return {
       final_type: 'refund',
       confidence: 'high',
-      reason: `Refund keyword match: ${refundMatch}`,
+      classification_reason: `Refund keyword match: ${refundMatch}`,
     };
   }
 
@@ -313,7 +313,7 @@ export function deriveFinalType(
     return {
       final_type: 'income',
       confidence: 'high',
-      reason: `Income keyword match: ${incomeHighMatch}`,
+      classification_reason: `Income keyword match: ${incomeHighMatch}`,
     };
   }
 
@@ -322,7 +322,7 @@ export function deriveFinalType(
     return {
       final_type: 'expense',
       confidence: 'high',
-      reason: `Expense keyword match: ${expenseHighMatch}`,
+      classification_reason: `Expense keyword match: ${expenseHighMatch}`,
     };
   }
 
@@ -331,7 +331,7 @@ export function deriveFinalType(
     return {
       final_type: 'income',
       confidence: 'medium',
-      reason: `Income keyword match: ${incomeMediumMatch}`,
+      classification_reason: `Income keyword match: ${incomeMediumMatch}`,
     };
   }
 
@@ -340,13 +340,13 @@ export function deriveFinalType(
     return {
       final_type: 'expense',
       confidence: 'medium',
-      reason: `Expense keyword match: ${expenseMediumMatch}`,
+      classification_reason: `Expense keyword match: ${expenseMediumMatch}`,
     };
   }
 
   return {
     final_type: 'needs_review',
     confidence: 'low',
-    reason: 'No reliable classification signal found',
+    classification_reason: 'No reliable classification signal found',
   };
 }

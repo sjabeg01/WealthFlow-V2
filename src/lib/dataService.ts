@@ -78,21 +78,10 @@ export async function getTransactions(from?: string, to?: string): Promise<Trans
   }
 
   const { data } = await query;
-  const mapped = (data || []).map((t: any) => {
-    let final_type: 'income' | 'expense' | 'transfer' | 'investment' | 'refund' = 'expense';
-    if (t.is_transfer === true || t.type === 'transfer') final_type = 'transfer';
-    else if (t.is_investment === true || t.type === 'investment') final_type = 'investment';
-    else if (t.type === 'income') final_type = 'income';
-    else if (t.type === 'refund') final_type = 'refund';
-    else if (t.type === 'expense') final_type = 'expense';
-    else if (t.direction === 'credit') final_type = 'income';
-    else if (t.direction === 'debit') final_type = 'expense';
-    else final_type = 'expense';
-    return {
-      ...t,
-      final_type,
-    };
-  });
+  const mapped = (data || []).map((t: any) => ({
+    ...t,
+    final_type: t.final_type // Direct mapping, no fallbacks required
+  }));
 
   return mapped as Transaction[];
 }

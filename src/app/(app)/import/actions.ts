@@ -158,7 +158,8 @@ export async function commitImportBatch(
       debit_amount:           rawDebit           ? parseFloat(String(rawDebit).replace(/[,$\s]/g, ''))           : undefined,
       credit_amount:          rawCredit          ? parseFloat(String(rawCredit).replace(/[,$\s]/g, ''))          : undefined,
       transaction_direction:  (rawDir as string) ?? undefined,
-      merchant_name:          merchant ?? rawDesc ?? undefined,
+      description:            rawDesc ?? undefined,
+      merchant_name:          merchant ?? undefined,
       category_hint:          (rawCategoryHint as string) ?? undefined,
       user_category_type:     userCategoryType,
     };
@@ -170,7 +171,7 @@ export async function commitImportBatch(
     const confidence = row.user_override ? 'high' : classification.confidence;
     const classificationReason = row.user_override 
       ? `User manual override to ${row.user_override}` 
-      : classification.reason;
+      : classification.classification_reason;
     
     const rawAmountForNorm = row.amount ?? context.debit_amount ?? context.credit_amount ?? 0;
     const signedAmount = normalizeAmount(rawAmountForNorm, finalType);
@@ -183,15 +184,11 @@ export async function commitImportBatch(
       description: rawDesc,
       merchant,
       amount: signedAmount, // Normalized amount
-      type: finalType,
-      direction: (finalType === 'income' || finalType === 'refund') ? 'credit' : (finalType === 'transfer') ? 'internal' : 'debit',
-      is_transfer: finalType === 'transfer',
-      is_investment: finalType === 'investment',
-      category_id: finalCategoryId,
-      transfer_pair_id: null,
-      source: 'import',
+      final_type: finalType,
+      classification_reason: classificationReason,
       confidence,
-      notes: classificationReason,
+      category_id: finalCategoryId,
+      source: 'import',
     };
     
     if (finalType === 'needs_review') {

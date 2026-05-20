@@ -398,6 +398,17 @@ export function deriveFinalType(
       };
     }
   }
+
+  // Negative amount check executes immediately after direction checks, before keyword matching
+  const amount = toNumber(context.amount);
+  if (amount !== null && amount < 0) {
+    return {
+      final_type: 'expense',
+      confidence: 'high',
+      classification_reason: 'Negative amount signal',
+    };
+  }
+
   const text = normalizeText([
     context.description,
     context.merchant_name,
@@ -473,14 +484,6 @@ export function deriveFinalType(
       final_type: 'income',
       confidence: 'high',
       classification_reason: 'Positive credit_amount signal',
-    };
-  }
-  const amount = toNumber(context.amount);
-  if (amount !== null && amount < 0) {
-    return {
-      final_type: 'expense',
-      confidence: 'high',
-      classification_reason: 'Negative amount signal',
     };
   }
   return {

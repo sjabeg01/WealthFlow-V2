@@ -23,4 +23,7 @@ export interface ClassificationResult {
   final_type: FinalType;
   confidence: ConfidenceLevel;
   classification_reason: string;
+  confidence_score: number;
+  score_breakdown: string[];
+  merchant_clean_name: string | null;
 }

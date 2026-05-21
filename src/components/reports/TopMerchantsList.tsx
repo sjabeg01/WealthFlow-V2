@@ -28,7 +28,7 @@ export default function TopMerchantsList({ merchants }: TopMerchantsListProps) {
           <div key={`${merchant.merchant}-${index}`} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
               <span style={{ fontWeight: 500 }}>{merchant.merchant}</span>
-              <span style={{ fontWeight: 600 }}>{formatCurrency(merchant.total, 'AUD')}</span>
+              <span style={{ fontWeight: 600 }}>{formatCurrency(merchant.total, 'NPR')}</span>
             </div>
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

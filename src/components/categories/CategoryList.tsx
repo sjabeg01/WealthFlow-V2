@@ -55,7 +55,7 @@ export default function CategoryList({ breakdown }: CategoryListProps) {
             
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontWeight: 600 }}>
-                {formatCurrency(item.total, 'AUD')}
+                {formatCurrency(item.total, 'NPR')}
               </div>
               <div style={{ fontSize: '0.75rem', opacity: 0.6, color: 'var(--color-text)' }}>
                 {item.percentage.toFixed(1)}%

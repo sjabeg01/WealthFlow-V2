@@ -51,7 +51,7 @@ export default function IncomeExpenseTrend({ data }: IncomeExpenseTrendProps) {
             dy={10}
           />
           <Tooltip 
-            formatter={(value: number, name: string) => [formatCurrency(value, 'AUD'), name.charAt(0).toUpperCase() + name.slice(1)]}
+            formatter={(value: number, name: string) => [formatCurrency(value, 'NPR'), name.charAt(0).toUpperCase() + name.slice(1)]}
             contentStyle={{ 
               backgroundColor: 'var(--color-surface)',
               border: '1px solid var(--color-border)',

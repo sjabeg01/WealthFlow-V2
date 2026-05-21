@@ -8,33 +8,6 @@ import Badge from '@/components/ui/Badge';
 import { useRouter } from 'next/navigation';
 import { Check, Loader2 } from 'lucide-react';
 
-const getDisplayAmount = (transaction: any) => {
-  const type = transaction.type || transaction.final_type;
-  const isIncome = type === 'income' || type === 'transfer_in' || type === 'refund';
-  return isIncome ? Math.abs(transaction.amount || 0) : -Math.abs(transaction.amount || 0);
-};
-
-function formatAmount(amount: number, finalType: string): string {
-  const abs = Math.abs(amount);
-  const formatted = abs.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
-
-  switch (finalType) {
-    case 'expense':
-      return `-${formatted}`;
-    case 'income':
-      return `+${formatted}`;
-    case 'refund':
-      return `+${formatted}`;
-    case 'transfer':
-      return formatted;
-    default:
-      return formatted;
-  }
-}
-
 function getAmountColor(finalType: string): string {
   switch (finalType) {
     case 'expense':
@@ -98,6 +71,14 @@ export default function TransactionTable({ transactions, categories }: Transacti
   // Pre-sort categories alphabetically for the dropdown
   const sortedCategories = [...categories].sort((a, b) => a.name.localeCompare(b.name));
 
+  const getDisplayAmount = (transaction: any): number => {
+    const isIncome =
+      transaction.type === 'income' || transaction.type === 'transfer_in' || transaction.final_type === 'income' || transaction.final_type === 'refund';
+    return isIncome
+      ? Math.abs(transaction.amount || 0)
+      : -Math.abs(transaction.amount || 0);
+  };
+
   return (
     <div style={{ width: '100%', overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
@@ -110,39 +91,38 @@ export default function TransactionTable({ transactions, categories }: Transacti
           </tr>
         </thead>
         <tbody>
-          {transactions.map((tx) => {
-            const currentCategoryId = optimisticCategories[tx.id] !== undefined 
-              ? optimisticCategories[tx.id] 
-              : tx.category_id;
+          {transactions.map((transaction) => {
+            const currentCategoryId = optimisticCategories[transaction.id] !== undefined 
+              ? optimisticCategories[transaction.id] 
+              : transaction.category_id;
               
-            const isIncome = tx.final_type === 'income' || tx.final_type === 'refund';
+            const isIncome = transaction.final_type === 'income' || transaction.final_type === 'refund';
             
-            // Determine if it needs a badge
             let badge = null;
-            if (tx.final_type === 'transfer') {
+            if (transaction.final_type === 'transfer') {
               badge = <Badge variant="info" style={{ marginLeft: '0.5rem' }}>Transfer</Badge>;
-            } else if (tx.final_type === 'investment') {
+            } else if (transaction.final_type === 'investment') {
               badge = <Badge variant="warning" style={{ marginLeft: '0.5rem' }}>Investment</Badge>;
-            } else if (tx.final_type === 'refund') {
+            } else if (transaction.final_type === 'refund') {
               badge = <Badge variant="success" style={{ marginLeft: '0.5rem' }}>Refund</Badge>;
             }
 
             return (
-              <tr key={tx.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+              <tr key={transaction.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                 <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap' }}>
-                  {tx.date}
+                  {transaction.date}
                 </td>
                 <td style={{ padding: '0.75rem 1rem' }}>
-                  <div style={{ fontWeight: 500 }}>{tx.merchant || tx.description}</div>
-                  {tx.merchant && <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{tx.description}</div>}
+                  <div style={{ fontWeight: 500 }}>{transaction.merchant || transaction.description}</div>
+                  {transaction.merchant && <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{transaction.description}</div>}
                   {badge}
                 </td>
                 <td style={{ padding: '0.75rem 1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <select
                       value={currentCategoryId || ''}
-                      onChange={(e) => handleCategoryChange(tx.id, e.target.value || null)}
-                      disabled={saveStatus[tx.id] === 'saving'}
+                      onChange={(e) => handleCategoryChange(transaction.id, e.target.value || null)}
+                      disabled={saveStatus[transaction.id] === 'saving'}
                       style={{
                         padding: '0.25rem 0.5rem',
                         borderRadius: 'var(--radius-sm)',
@@ -152,7 +132,7 @@ export default function TransactionTable({ transactions, categories }: Transacti
                         fontSize: '0.875rem',
                         width: '150px',
                         outline: 'none',
-                        opacity: saveStatus[tx.id] === 'saving' ? 0.7 : 1,
+                        opacity: saveStatus[transaction.id] === 'saving' ? 0.7 : 1,
                       }}
                     >
                       <option value="">Uncategorized</option>
@@ -160,35 +140,40 @@ export default function TransactionTable({ transactions, categories }: Transacti
                         <option key={cat.id} value={cat.id}>{cat.name}</option>
                       ))}
                     </select>
-                    {tx.confidence_score !== undefined && tx.confidence_score !== null && (
+                    {transaction.confidence_score !== undefined && transaction.confidence_score !== null && (
                       <>
-                        {tx.confidence_score >= 85 && (
+                        {transaction.confidence_score >= 85 && (
                           <span title="High Confidence" style={{ display: 'inline-block', width: '8px', height: '8px', backgroundColor: 'var(--color-success)', borderRadius: '50%', flexShrink: 0 }} />
                         )}
-                        {tx.confidence_score >= 50 && tx.confidence_score < 85 && (
+                        {transaction.confidence_score >= 50 && transaction.confidence_score < 85 && (
                           <span title="Medium Confidence" style={{ display: 'inline-block', padding: '0.125rem 0.375rem', backgroundColor: '#fef08a', color: '#854d0e', fontSize: '10px', borderRadius: 'var(--radius-sm)', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>
                             Review?
                           </span>
                         )}
-                        {tx.confidence_score < 50 && (
+                        {transaction.confidence_score < 50 && (
                           <span title="Low Confidence" style={{ display: 'inline-block', padding: '0.125rem 0.375rem', backgroundColor: 'var(--color-danger)', color: '#ffffff', fontSize: '10px', borderRadius: 'var(--radius-sm)', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>
                             Review
                           </span>
                         )}
                       </>
                     )}
-                    {(tx.confidence_score === undefined || tx.confidence_score === null) && (tx.final_type as string) === 'needs_review' && (
+                    {(transaction.confidence_score === undefined || transaction.confidence_score === null) && (transaction.final_type as string) === 'needs_review' && (
                       <span title="Needs Review" style={{ display: 'inline-block', padding: '0.125rem 0.375rem', backgroundColor: 'var(--color-danger)', color: '#ffffff', fontSize: '10px', borderRadius: 'var(--radius-sm)', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>
                         Review
                       </span>
                     )}
-                    {saveStatus[tx.id] === 'saving' && <Loader2 size={16} className="animate-spin text-muted" style={{ color: 'var(--color-text-secondary)' }} />}
-                    {saveStatus[tx.id] === 'saved' && <Check size={16} style={{ color: 'var(--color-success)' }} />}
-                    {saveStatus[tx.id] === 'error' && <span style={{ color: 'var(--color-danger)', fontSize: '0.75rem' }}>Error</span>}
+                    {saveStatus[transaction.id] === 'saving' && <Loader2 size={16} className="animate-spin text-muted" style={{ color: 'var(--color-text-secondary)' }} />}
+                    {saveStatus[transaction.id] === 'saved' && <Check size={16} style={{ color: 'var(--color-success)' }} />}
+                    {saveStatus[transaction.id] === 'error' && <span style={{ color: 'var(--color-danger)', fontSize: '0.75rem' }}>Error</span>}
                   </div>
                 </td>
-                <td className={`text-right font-medium ${getDisplayAmount(tx) >= 0 ? 'text-green-600' : 'text-red-600'}`} style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 500, color: getDisplayAmount(tx) >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
-                  {formatCurrency(getDisplayAmount(tx), (tx as any).currency || 'NPR')}
+                <td
+                  className={`text-right font-medium ${
+                    getDisplayAmount(transaction) >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}
+                  style={{ padding: '0.75rem 1rem' }}
+                >
+                  {formatCurrency(getDisplayAmount(transaction), (transaction as any).currency || 'NPR')}
                 </td>
               </tr>
             );

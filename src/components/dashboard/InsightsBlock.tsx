@@ -40,7 +40,7 @@ export default function InsightsBlock({ transactions, goals }: InsightsBlockProp
           {summary.surplus >= 0 ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
         </div>
         <div style={{ fontSize: '0.875rem', color: 'var(--color-text)' }}>
-          <span style={{ fontWeight: 500 }}>{summary.surplus >= 0 ? 'Positive Cashflow:' : 'Negative Cashflow:'}</span> You have a net surplus of {formatCurrency(summary.surplus, 'AUD')} this period.
+          <span style={{ fontWeight: 500 }}>{summary.surplus >= 0 ? 'Positive Cashflow:' : 'Negative Cashflow:'}</span> You have a net surplus of {formatCurrency(summary.surplus, 'NPR')} this period.
         </div>
       </div>
 
@@ -51,7 +51,7 @@ export default function InsightsBlock({ transactions, goals }: InsightsBlockProp
             <AlertCircle size={18} />
           </div>
           <div style={{ fontSize: '0.875rem', color: 'var(--color-text)' }}>
-            <span style={{ fontWeight: 500 }}>Highest Spend:</span> {topCategory.categoryName} accounts for {formatCurrency(topCategory.total, 'AUD')} ({topCategory.percentage.toFixed(0)}% of expenses).
+            <span style={{ fontWeight: 500 }}>Highest Spend:</span> {topCategory.categoryName} accounts for {formatCurrency(topCategory.total, 'NPR')} ({topCategory.percentage.toFixed(0)}% of expenses).
           </div>
         </div>
       )}
@@ -62,7 +62,7 @@ export default function InsightsBlock({ transactions, goals }: InsightsBlockProp
           <CheckCircle2 size={18} />
         </div>
         <div style={{ fontSize: '0.875rem', color: 'var(--color-text)' }}>
-          <span style={{ fontWeight: 500 }}>Safe to Invest:</span> You have {formatCurrency(summary.safeToInvest, 'AUD')} available to invest after accounting for goal targets.
+          <span style={{ fontWeight: 500 }}>Safe to Invest:</span> You have {formatCurrency(summary.safeToInvest, 'NPR')} available to invest after accounting for goal targets.
         </div>
       </div>
 
@@ -73,7 +73,7 @@ export default function InsightsBlock({ transactions, goals }: InsightsBlockProp
             <Lightbulb size={18} />
           </div>
           <div style={{ fontSize: '0.875rem', color: 'var(--color-text)', opacity: 0.9 }}>
-            <span style={{ fontWeight: 500 }}>Top Merchant:</span> {topMerchant.merchant} ({formatCurrency(topMerchant.total, 'AUD')}).
+            <span style={{ fontWeight: 500 }}>Top Merchant:</span> {topMerchant.merchant} ({formatCurrency(topMerchant.total, 'NPR')}).
           </div>
         </div>
       )}

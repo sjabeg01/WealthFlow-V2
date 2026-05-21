@@ -56,19 +56,19 @@ export default async function ReportsPage(props: { searchParams: SearchParams })
         <Card style={{ padding: '1.5rem' }}>
           <div style={{ fontSize: '0.875rem', opacity: 0.7, marginBottom: '0.5rem' }}>Income</div>
           <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--color-success)' }}>
-            {formatCurrency(summary.totalIncome, 'AUD')}
+            {formatCurrency(summary.totalIncome, 'NPR')}
           </div>
         </Card>
         <Card style={{ padding: '1.5rem' }}>
           <div style={{ fontSize: '0.875rem', opacity: 0.7, marginBottom: '0.5rem' }}>Expenses</div>
           <div style={{ fontSize: '1.5rem', fontWeight: 600 }}>
-            {formatCurrency(summary.totalExpenses, 'AUD')}
+            {formatCurrency(summary.totalExpenses, 'NPR')}
           </div>
         </Card>
         <Card style={{ padding: '1.5rem' }}>
           <div style={{ fontSize: '0.875rem', opacity: 0.7, marginBottom: '0.5rem' }}>Surplus</div>
           <div style={{ fontSize: '1.5rem', fontWeight: 600, color: summary.surplus >= 0 ? 'var(--color-success)' : 'var(--color-warning)' }}>
-            {summary.surplus >= 0 ? '+' : ''}{formatCurrency(summary.surplus, 'AUD')}
+            {summary.surplus >= 0 ? '+' : ''}{formatCurrency(summary.surplus, 'NPR')}
           </div>
         </Card>
       </div>

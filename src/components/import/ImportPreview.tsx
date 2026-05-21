@@ -13,7 +13,7 @@ import { deriveFinalType, type ClassificationContext, type FinalType } from '@/l
 import { normalizeAmount } from '@/lib/importPipeline/normalizeAmount';
 import { cleanMerchant } from '@/lib/normalization';
 import { normalizeRawRow } from '@/lib/importPipeline/normalizer';
-
+import { formatCurrency } from '@/lib/financeEngine';
 interface ImportPreviewUIProps {
   preview: ImportPreview;
   accounts: Account[];
@@ -432,7 +432,11 @@ export default function ImportPreviewUI({
                       <td style={{ padding: '0.75rem 1rem' }}>{row.date || <span style={{ color: 'var(--color-danger)' }}>Missing</span>}</td>
                       <td style={{ padding: '0.75rem 1rem' }}>{row.description || <span style={{ color: 'var(--color-danger)' }}>Missing</span>}</td>
                       <td style={{ padding: '0.75rem 1rem' }}>-</td>
-                      <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>{row.amount !== null ? row.amount.toFixed(2) : <span style={{ color: 'var(--color-danger)' }}>Missing</span>}</td>
+                      <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                        {row.amount !== null 
+                          ? formatCurrency(-Math.abs(row.amount), (row as any).currency || 'NPR') 
+                          : <span style={{ color: 'var(--color-danger)' }}>Missing</span>}
+                      </td>
                       <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}><Badge variant="danger" title={row.reason}>Skipped</Badge></td>
                     </tr>
                   ))}
@@ -467,7 +471,12 @@ export default function ImportPreviewUI({
                           ? 'var(--color-danger)' 
                           : 'inherit' 
                       }}>
-                        {row.final_type === 'skip' ? '0.00' : (row.signed_amount >= 0 ? '+' : '') + row.signed_amount.toFixed(2)}
+                        {(() => {
+                          if (row.final_type === 'skip') return '0.00';
+                          const isIncome = (row as any).classification?.type === 'income' || (row as any).classification?.type === 'transfer_in' || row.final_type === 'income' || row.final_type === 'refund';
+                          const displayAmount = isIncome ? Math.abs(row.amount || 0) : -Math.abs(row.amount || 0);
+                          return formatCurrency(displayAmount, (row as any).currency || 'NPR');
+                        })()}
                       </td>
                       <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
                         <Badge variant={row.final_type === 'skip' ? 'danger' : 'success'}>
@@ -652,7 +661,13 @@ function ClassificationPreview({
                     <tr key={i} style={{ borderTop: '1px solid var(--color-border)', background: 'rgba(245, 158, 11, 0.05)' }}>
                       <td style={{ padding: '0.75rem 1rem' }}>{row.date}</td>
                       <td style={{ padding: '0.75rem 1rem' }}>{row.description}</td>
-                      <td style={{ padding: '0.75rem 1rem' }}>{Math.abs(row.signed_amount).toFixed(2)}</td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        {(() => {
+                          const isIncome = (row as any).classification?.type === 'income' || (row as any).classification?.type === 'transfer_in' || (row.user_override ?? row.final_type) === 'income' || (row.user_override ?? row.final_type) === 'refund';
+                          const displayAmount = isIncome ? Math.abs(row.amount || 0) : -Math.abs(row.amount || 0);
+                          return formatCurrency(displayAmount, (row as any).currency || 'NPR');
+                        })()}
+                      </td>
                       <td style={{ padding: '0.75rem 1rem' }}>
                         <span style={{ 
                           color: (row.user_override ?? row.final_type) === 'expense' ? 'var(--color-danger)' : 

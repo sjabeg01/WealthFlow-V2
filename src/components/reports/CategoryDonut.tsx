@@ -47,7 +47,7 @@ export default function CategoryDonut({ breakdown }: CategoryDonutProps) {
             ))}
           </Pie>
           <Tooltip 
-            formatter={(value: number) => formatCurrency(value, 'AUD')}
+            formatter={(value: number) => formatCurrency(value, 'NPR')}
             contentStyle={{ 
               backgroundColor: 'var(--color-surface)',
               border: '1px solid var(--color-border)',
@@ -65,7 +65,7 @@ export default function CategoryDonut({ breakdown }: CategoryDonutProps) {
         pointerEvents: 'none'
       }}>
         <div style={{ fontSize: '0.875rem', opacity: 0.7 }}>Total Spent</div>
-        <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>{formatCurrency(totalSpend, 'AUD')}</div>
+        <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>{formatCurrency(totalSpend, 'NPR')}</div>
       </div>
     </div>
   );

@@ -24,6 +24,18 @@ export function runScoringEngine(context: ClassificationContext): ScoringResult 
   const scores = { expense: 0, income: 0, transfer: 0, investment: 0, refund: 0 };
   let merchantMatchName: string | null = null;
 
+  const text = normalizeText([context.description, context.merchant_name, context.category_hint]);
+
+  // ── Signal 0: CASHBACK / REFUND DETECTION (HIGHEST PRIORITY) ──
+  // Refunds override merchant default types
+  const cashbackKeywords = ['cashback', 'refund', 'reversal', 'chargeback', 'reimbursement'];
+  const isCashback = cashbackKeywords.some(kw => text.includes(kw.toLowerCase()));
+
+  if (isCashback) {
+    breakdown.push('🔄 Cashback/Refund detected — overriding to refund type');
+    scores.refund += 100; // Highest priority
+  }
+
   const combinedText = [context.description, context.merchant_name, context.category_hint].filter(Boolean).join(' ');
   const merchantEntry = checkMerchantDatabase(combinedText);
   
@@ -52,7 +64,6 @@ export function runScoringEngine(context: ClassificationContext): ScoringResult 
   if (toNumber(context.debit_amount) > 0) { scores.expense += 15; breakdown.push('Debit amount present (+15)'); }
   if (toNumber(context.credit_amount) > 0) { scores.income += 15; breakdown.push('Credit amount present (+15)'); }
 
-  const text = normalizeText([context.description, context.merchant_name, context.category_hint]);
   if (hasAny(text, TRANSFER_KEYWORDS)) { scores.transfer += 30; breakdown.push('High Keyword (+30): transfer'); }
   if (hasAny(text, INVESTMENT_KEYWORDS)) { scores.investment += 30; breakdown.push('High Keyword (+30): investment'); }
   if (hasAny(text, REFUND_KEYWORDS)) { scores.refund += 30; breakdown.push('High Keyword (+30): refund'); }

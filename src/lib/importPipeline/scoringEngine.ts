@@ -13,12 +13,25 @@ export interface ScoringResult {
 }
 
 export function runScoringEngine(context: ClassificationContext): ScoringResult {
+  console.log('🔍 SCORING ENGINE STARTED', {
+    description: context.description,
+    merchant_name: context.merchant_name,
+    direction: context.transaction_direction,
+    amount: context.amount,
+  });
+
   const breakdown: string[] = [];
   const scores = { expense: 0, income: 0, transfer: 0, investment: 0, refund: 0 };
   let merchantMatchName: string | null = null;
 
   const combinedText = [context.description, context.merchant_name, context.category_hint].filter(Boolean).join(' ');
   const merchantEntry = checkMerchantDatabase(combinedText);
+  
+  console.log('🏪 MERCHANT LOOKUP', { 
+    combinedText, 
+    found: !!merchantEntry, 
+    matchedName: merchantEntry?.cleanName 
+  });
   
   if (merchantEntry) {
     scores[merchantEntry.defaultType] += merchantEntry.scoreBonus;

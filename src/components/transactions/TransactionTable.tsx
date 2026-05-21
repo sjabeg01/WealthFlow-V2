@@ -8,6 +8,12 @@ import Badge from '@/components/ui/Badge';
 import { useRouter } from 'next/navigation';
 import { Check, Loader2 } from 'lucide-react';
 
+const getDisplayAmount = (transaction: any) => {
+  const type = transaction.type || transaction.final_type;
+  const isIncome = type === 'income' || type === 'transfer_in' || type === 'refund';
+  return isIncome ? Math.abs(transaction.amount || 0) : -Math.abs(transaction.amount || 0);
+};
+
 function formatAmount(amount: number, finalType: string): string {
   const abs = Math.abs(amount);
   const formatted = abs.toLocaleString('en-US', {
@@ -181,8 +187,8 @@ export default function TransactionTable({ transactions, categories }: Transacti
                     {saveStatus[tx.id] === 'error' && <span style={{ color: 'var(--color-danger)', fontSize: '0.75rem' }}>Error</span>}
                   </div>
                 </td>
-                <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 600, color: getAmountColor(tx.final_type) }}>
-                  {formatAmount(tx.amount, tx.final_type)}
+                <td className={`text-right font-medium ${getDisplayAmount(tx) >= 0 ? 'text-green-600' : 'text-red-600'}`} style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 500, color: getDisplayAmount(tx) >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                  {formatCurrency(getDisplayAmount(tx), (tx as any).currency || 'NPR')}
                 </td>
               </tr>
             );

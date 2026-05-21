@@ -12,6 +12,7 @@ import { MAPPABLE_COLUMNS } from '@/lib/importPipeline/columnConfig';
 import { deriveFinalType, type ClassificationContext, type FinalType } from '@/lib/importPipeline/deriveFinalType';
 import { normalizeAmount } from '@/lib/importPipeline/normalizeAmount';
 import { cleanMerchant } from '@/lib/normalization';
+import { normalizeRawRow } from '@/lib/importPipeline/normalizer';
 
 interface ImportPreviewUIProps {
   preview: ImportPreview;
@@ -151,13 +152,6 @@ export default function ImportPreviewUI({
   // Calculate estimated totals using classification results
   const classifiedAcceptedRows = React.useMemo(() => {
     return acceptedRows.map((row) => {
-      const rawDebit = mapping.debitColumn ? row.rawData[mapping.debitColumn] : undefined;
-      const rawCredit = mapping.creditColumn ? row.rawData[mapping.creditColumn] : undefined;
-      const rawDir = mapping.transactionDirectionColumn ? row.rawData[mapping.transactionDirectionColumn] : undefined;
-      const rawCategoryHint = mapping.categoryHintColumn ? row.rawData[mapping.categoryHintColumn] : undefined;
-
-      const cleanMerchantName = row.description ? cleanMerchant(row.description) : undefined;
-
       let matchedCategoryType: 'expense_only' | 'income_only' | 'mixed' | undefined = undefined;
       if (row.inferredCategoryName) {
         const cat = categories.find(c => c.name.toLowerCase() === row.inferredCategoryName!.toLowerCase());
@@ -166,15 +160,8 @@ export default function ImportPreviewUI({
         }
       }
 
-      const context: ClassificationContext = {
-        amount: row.amount ?? undefined,
-        debit_amount: rawDebit ? parseFloat(String(rawDebit).replace(/[,$\s]/g, '')) : undefined,
-        credit_amount: rawCredit ? parseFloat(String(rawCredit).replace(/[,$\s]/g, '')) : undefined,
-        transaction_direction: rawDir ?? undefined,
-        merchant_name: cleanMerchantName ?? row.description ?? undefined,
-        category_hint: rawCategoryHint ?? undefined,
-        user_category_type: matchedCategoryType
-      };
+      const context = normalizeRawRow(row, mapping);
+      context.user_category_type = matchedCategoryType;
 
       const result = deriveFinalType(context);
       const finalType = row.user_override ?? result.final_type;
@@ -182,6 +169,7 @@ export default function ImportPreviewUI({
       
       return {
         ...row,
+        date: context.date || row.date,
         final_type: finalType,
         signed_amount: normalizeAmount(rawAmountForNorm, finalType === 'skip' ? 'needs_review' : finalType),
         confidence: row.user_override ? 'high' : result.confidence,
@@ -526,13 +514,6 @@ function ClassificationPreview({
 
   const classifiedRows = React.useMemo(() => {
     return rows.map((row) => {
-      const rawDebit = mapping.debitColumn ? row.rawData[mapping.debitColumn] : undefined;
-      const rawCredit = mapping.creditColumn ? row.rawData[mapping.creditColumn] : undefined;
-      const rawDir = mapping.transactionDirectionColumn ? row.rawData[mapping.transactionDirectionColumn] : undefined;
-      const rawCategoryHint = mapping.categoryHintColumn ? row.rawData[mapping.categoryHintColumn] : undefined;
-
-      const cleanMerchantName = row.description ? cleanMerchant(row.description) : undefined;
-
       let matchedCategoryType: 'expense_only' | 'income_only' | 'mixed' | undefined = undefined;
       if (row.inferredCategoryName) {
         const cat = categories.find(c => c.name.toLowerCase() === row.inferredCategoryName!.toLowerCase());
@@ -541,15 +522,8 @@ function ClassificationPreview({
         }
       }
 
-      const context: ClassificationContext = {
-        amount: row.amount ?? undefined,
-        debit_amount: rawDebit ? parseFloat(String(rawDebit).replace(/[,$\s]/g, '')) : undefined,
-        credit_amount: rawCredit ? parseFloat(String(rawCredit).replace(/[,$\s]/g, '')) : undefined,
-        transaction_direction: rawDir ?? undefined,
-        merchant_name: cleanMerchantName ?? row.description ?? undefined,
-        category_hint: rawCategoryHint ?? undefined,
-        user_category_type: matchedCategoryType
-      };
+      const context = normalizeRawRow(row, mapping);
+      context.user_category_type = matchedCategoryType;
 
       const result = deriveFinalType(context);
       const user_override = overrides[row.rowIndex] ?? row.user_override;
@@ -558,6 +532,7 @@ function ClassificationPreview({
       
       return {
         ...row,
+        date: context.date || row.date,
         final_type: finalType,
         user_override,
         signed_amount: normalizeAmount(rawAmountForNorm, finalType === 'skip' ? 'needs_review' : finalType),

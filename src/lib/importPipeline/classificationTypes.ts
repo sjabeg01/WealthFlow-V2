@@ -17,6 +17,13 @@ export interface ClassificationContext {
   merchant_name?: string | null;
   category_hint?: string | null;
   user_category_type?: 'expense_only' | 'income_only' | 'mixed' | null;
+  reference?: string | null;
+  payment_channel?: string | null;
+  running_balance?: number | null;
+  direction_source?: 'explicit_column' | 'notes_hint' | 'amount_sign' | 'unknown';
+  date?: string | null;
+  date_needs_review?: boolean | null;
+  currency?: string | null;
 }
 
 export interface ClassificationResult {

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import type { ImportPreview, ParsedRow } from '@/types';
 import { cleanMerchant, detectCategory } from '@/lib/normalization';
 import { deriveFinalType, type ClassificationContext } from '@/lib/importPipeline/deriveFinalType';
+import { normalizeRawRow } from '@/lib/importPipeline/normalizer';
 import { normalizeAmount } from '@/lib/importPipeline/normalizeAmount';
 import { processTransferPairing } from '@/lib/import/transferMatcher';
 
@@ -94,6 +95,20 @@ export async function commitImportBatch(
   // High confidence transfer candidates (to be paired later)
   const transferCandidates: any[] = [];
 
+  // Dynamic check for running_balance column in transactions table
+  let supportsRunningBalance = false;
+  try {
+    const { error: checkError } = await supabase
+      .from('transactions')
+      .select('running_balance')
+      .limit(1);
+    if (!checkError) {
+      supportsRunningBalance = true;
+    }
+  } catch (e) {
+    // Ignore
+  }
+
   for (const row of acceptedRows) {
     const rawDesc = row.description || '';
     const merchant = cleanMerchant(rawDesc);
@@ -151,23 +166,9 @@ export async function commitImportBatch(
     const matchedCategory = allCategories.find(c => c.id === finalCategoryId);
     const userCategoryType = matchedCategory?.type ?? undefined;
     
-    // 2. CLASSIFICATION ENGINE
-    const mapping = preview.columnMapping;
-    const rawDebit = mapping.debitColumn ? row.rawData[mapping.debitColumn] : undefined;
-    const rawCredit = mapping.creditColumn ? row.rawData[mapping.creditColumn] : undefined;
-    const rawDir = mapping.transactionDirectionColumn ? row.rawData[mapping.transactionDirectionColumn] : undefined;
-    const rawCategoryHint = mapping.categoryHintColumn ? row.rawData[mapping.categoryHintColumn] : undefined;
-
-    const context: ClassificationContext = {
-      amount:                 row.amount         ? parseFloat(String(row.amount).replace(/[,$\s]/g, ''))         : undefined,
-      debit_amount:           rawDebit           ? parseFloat(String(rawDebit).replace(/[,$\s]/g, ''))           : undefined,
-      credit_amount:          rawCredit          ? parseFloat(String(rawCredit).replace(/[,$\s]/g, ''))          : undefined,
-      transaction_direction:  (rawDir as string) ?? undefined,
-      description:            rawDesc ?? undefined,
-      merchant_name:          merchant ?? undefined,
-      category_hint:          (rawCategoryHint as string) ?? undefined,
-      user_category_type:     userCategoryType,
-    };
+    // 2. CLASSIFICATION ENGINE (with Universal Normalization)
+    const context = normalizeRawRow(row, preview.columnMapping);
+    context.user_category_type = userCategoryType;
 
     const classification = deriveFinalType(context);
     
@@ -184,11 +185,11 @@ export async function commitImportBatch(
     const userCorrected = !!row.user_override;
     const userCorrectionType = row.user_override || null;
 
-    const tx = {
+    const tx: any = {
       user_id: userId,
       account_id: accountId,
       import_batch_id: batchId,
-      date: row.date,
+      date: context.date || row.date,
       description: rawDesc,
       merchant,
       amount: signedAmount, // Normalized amount
@@ -203,6 +204,10 @@ export async function commitImportBatch(
       user_corrected: userCorrected,
       user_correction_type: userCorrectionType,
     };
+    
+    if (supportsRunningBalance && context.running_balance !== null && context.running_balance !== undefined) {
+      tx.running_balance = context.running_balance;
+    }
     
     if (finalType === 'needs_review') {
       reviewQueue.push(tx);

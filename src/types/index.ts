@@ -67,6 +67,11 @@ export interface Transaction {
   confidence: TransactionConfidence;
   notes: string | null;
   created_at: string;
+  confidence_score?: number | null;
+  score_breakdown?: string | null;
+  merchant_clean_name?: string | null;
+  user_corrected?: boolean;
+  user_correction_type?: string | null;
 }
 
 // ------ Import ------

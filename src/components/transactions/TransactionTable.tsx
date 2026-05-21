@@ -154,6 +154,28 @@ export default function TransactionTable({ transactions, categories }: Transacti
                         <option key={cat.id} value={cat.id}>{cat.name}</option>
                       ))}
                     </select>
+                    {tx.confidence_score !== undefined && tx.confidence_score !== null && (
+                      <>
+                        {tx.confidence_score >= 85 && (
+                          <span title="High Confidence" style={{ display: 'inline-block', width: '8px', height: '8px', backgroundColor: 'var(--color-success)', borderRadius: '50%', flexShrink: 0 }} />
+                        )}
+                        {tx.confidence_score >= 50 && tx.confidence_score < 85 && (
+                          <span title="Medium Confidence" style={{ display: 'inline-block', padding: '0.125rem 0.375rem', backgroundColor: '#fef08a', color: '#854d0e', fontSize: '10px', borderRadius: 'var(--radius-sm)', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                            Review?
+                          </span>
+                        )}
+                        {tx.confidence_score < 50 && (
+                          <span title="Low Confidence" style={{ display: 'inline-block', padding: '0.125rem 0.375rem', backgroundColor: 'var(--color-danger)', color: '#ffffff', fontSize: '10px', borderRadius: 'var(--radius-sm)', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                            Review
+                          </span>
+                        )}
+                      </>
+                    )}
+                    {(tx.confidence_score === undefined || tx.confidence_score === null) && (tx.final_type as string) === 'needs_review' && (
+                      <span title="Needs Review" style={{ display: 'inline-block', padding: '0.125rem 0.375rem', backgroundColor: 'var(--color-danger)', color: '#ffffff', fontSize: '10px', borderRadius: 'var(--radius-sm)', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        Review
+                      </span>
+                    )}
                     {saveStatus[tx.id] === 'saving' && <Loader2 size={16} className="animate-spin text-muted" style={{ color: 'var(--color-text-secondary)' }} />}
                     {saveStatus[tx.id] === 'saved' && <Check size={16} style={{ color: 'var(--color-success)' }} />}
                     {saveStatus[tx.id] === 'error' && <span style={{ color: 'var(--color-danger)', fontSize: '0.75rem' }}>Error</span>}

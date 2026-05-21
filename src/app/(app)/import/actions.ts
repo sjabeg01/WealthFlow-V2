@@ -181,6 +181,9 @@ export async function commitImportBatch(
     const rawAmountForNorm = row.amount ?? context.debit_amount ?? context.credit_amount ?? 0;
     const signedAmount = normalizeAmount(rawAmountForNorm, finalType);
 
+    const userCorrected = !!row.user_override;
+    const userCorrectionType = row.user_override || null;
+
     const tx = {
       user_id: userId,
       account_id: accountId,
@@ -194,6 +197,11 @@ export async function commitImportBatch(
       confidence,
       category_id: finalCategoryId,
       source: 'import',
+      confidence_score: classification.confidence_score,
+      score_breakdown: classification.score_breakdown ? JSON.stringify(classification.score_breakdown) : null,
+      merchant_clean_name: classification.merchant_clean_name,
+      user_corrected: userCorrected,
+      user_correction_type: userCorrectionType,
     };
     
     if (finalType === 'needs_review') {

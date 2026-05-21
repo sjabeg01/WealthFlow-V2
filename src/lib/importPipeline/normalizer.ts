@@ -135,11 +135,42 @@ export function normalizeRawRow(rawRow: any, mapping?: any): ClassificationConte
   const data = rawRow?.rawData || rawRow || {};
 
   // 1. Amount & Direction Normalization
-  let amount = 0;
   let debitAmount: number | null = null;
   let creditAmount: number | null = null;
   let direction: 'expense' | 'income' | 'transfer' = 'expense';
-  let directionSource: 'explicit_column' | 'notes_hint' | 'amount_sign' | 'unknown' = 'amount_sign';
+
+  // Exact block requested by user:
+  let rawAmountStr = String(rawRow[mapping?.amount || 'Amount'] || '');
+  const cleanAmountStr = rawAmountStr.replace(/[^\d.-]/g, '');
+  let amount = 0;
+  let direction_source: 'explicit_column' | 'notes_hint' | 'amount_sign' | 'unknown' = 'unknown';
+
+  if (cleanAmountStr && cleanAmountStr !== '-' && cleanAmountStr !== '.') {
+    const parsedAmount = parseFloat(cleanAmountStr);
+    if (!isNaN(parsedAmount)) {
+      amount = Math.abs(parsedAmount);
+      direction = parsedAmount < 0 ? 'expense' : 'income';
+      direction_source = 'amount_sign';
+    }
+  } else {
+    amount = 0;
+    direction_source = 'unknown';
+  }
+
+  // Fallback to explicit column mapping for amount if rawAmountStr is empty
+  if (!rawAmountStr && mapping?.amountColumn) {
+    const rawAmount = data[mapping.amountColumn];
+    const parsed = parseCleanAmount(rawAmount);
+    if (parsed !== null) {
+      amount = Math.abs(parsed);
+      direction = parsed < 0 ? 'expense' : 'income';
+      direction_source = 'amount_sign';
+    } else {
+      amount = 0;
+      direction = 'expense';
+      direction_source = 'unknown';
+    }
+  }
 
   if (mapping?.debitColumn || mapping?.creditColumn) {
     const rawDebit = mapping.debitColumn ? data[mapping.debitColumn] : null;
@@ -154,29 +185,17 @@ export function normalizeRawRow(rawRow: any, mapping?: any): ClassificationConte
     if (debitAmount !== null && debitAmount > 0) {
       amount = debitAmount;
       direction = 'expense';
-      directionSource = 'amount_sign';
+      direction_source = 'amount_sign';
     } else if (creditAmount !== null && creditAmount > 0) {
       amount = creditAmount;
       direction = 'income';
-      directionSource = 'amount_sign';
+      direction_source = 'amount_sign';
     } else {
       amount = 0;
       direction = 'expense';
-      directionSource = 'unknown';
+      direction_source = 'unknown';
     }
-  } else if (mapping?.amountColumn) {
-    const rawAmount = data[mapping.amountColumn];
-    const parsed = parseCleanAmount(rawAmount);
-    if (parsed !== null) {
-      amount = Math.abs(parsed);
-      direction = parsed < 0 ? 'expense' : 'income';
-      directionSource = 'amount_sign';
-    } else {
-      amount = 0;
-      direction = 'expense';
-      directionSource = 'unknown';
-    }
-  } else {
+  } else if (!rawAmountStr && !mapping?.amountColumn) {
     // Robust fallback case-insensitive lookup
     let found = false;
     const keys = Object.keys(data);
@@ -195,12 +214,12 @@ export function normalizeRawRow(rawRow: any, mapping?: any): ClassificationConte
       if (debitAmount !== null && debitAmount > 0) {
         amount = debitAmount;
         direction = 'expense';
-        directionSource = 'amount_sign';
+        direction_source = 'amount_sign';
         found = true;
       } else if (creditAmount !== null && creditAmount > 0) {
         amount = creditAmount;
         direction = 'income';
-        directionSource = 'amount_sign';
+        direction_source = 'amount_sign';
         found = true;
       }
     }
@@ -210,7 +229,7 @@ export function normalizeRawRow(rawRow: any, mapping?: any): ClassificationConte
       if (parsed !== null) {
         amount = Math.abs(parsed);
         direction = parsed < 0 ? 'expense' : 'income';
-        directionSource = 'amount_sign';
+        direction_source = 'amount_sign';
         found = true;
       }
     }
@@ -218,7 +237,7 @@ export function normalizeRawRow(rawRow: any, mapping?: any): ClassificationConte
     if (!found) {
       amount = 0;
       direction = 'expense';
-      directionSource = 'unknown';
+      direction_source = 'unknown';
     }
   }
 
@@ -242,9 +261,9 @@ export function normalizeRawRow(rawRow: any, mapping?: any): ClassificationConte
     const mappedDir = NOTES_MAPPING[categoryHint];
     if (mappedDir !== null) {
       direction = mappedDir;
-      directionSource = 'notes_hint';
+      direction_source = 'notes_hint';
     } else {
-      directionSource = 'amount_sign';
+      direction_source = 'amount_sign';
     }
   } else {
     // Try explicit direction column if notes did not match
@@ -252,13 +271,13 @@ export function normalizeRawRow(rawRow: any, mapping?: any): ClassificationConte
       const rawDirStr = String(data[mapping.transactionDirectionColumn]).toLowerCase().trim();
       if (['debit', 'dr', 'withdrawal', 'expense'].some(kw => rawDirStr.includes(kw))) {
         direction = 'expense';
-        directionSource = 'explicit_column';
+        direction_source = 'explicit_column';
       } else if (['credit', 'cr', 'deposit', 'income'].some(kw => rawDirStr.includes(kw))) {
         direction = 'income';
-        directionSource = 'explicit_column';
+        direction_source = 'explicit_column';
       } else if (['transfer', 'internal', 'xfer'].some(kw => rawDirStr.includes(kw))) {
         direction = 'transfer';
-        directionSource = 'explicit_column';
+        direction_source = 'explicit_column';
       }
     }
   }
@@ -358,7 +377,7 @@ export function normalizeRawRow(rawRow: any, mapping?: any): ClassificationConte
     reference,
     payment_channel,
     running_balance,
-    direction_source: directionSource,
+    direction_source,
     date,
     date_needs_review,
     currency,

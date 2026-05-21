@@ -260,18 +260,22 @@ export function getTopMerchants(
 // Helpers
 // -----------------------------------------------
 
-/** Format a number as currency string (AUD default) */
-export function formatCurrency(
-  amount: number,
-  currency = 'AUD',
-  locale = 'en-AU'
-): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
+export const formatCurrency = (amount: number, currency: string = 'NPR'): string => {
+  const currencySymbols: Record<string, string> = {
+    NPR: '₨',
+    USD: '$',
+    EUR: '€',
+    INR: '₹',
+    GBP: '£',
+  };
+  const symbol = currencySymbols[currency?.toUpperCase()] || '₨';
+  const absoluteAmount = Math.abs(amount || 0);
+  const formatted = new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 2,
-  }).format(amount);
-}
+    maximumFractionDigits: 2,
+  }).format(absoluteAmount);
+  return `${amount < 0 ? '-' : ''}${symbol}${formatted}`;
+};
 
 /** Filter transactions to a date range */
 export function filterByDateRange(

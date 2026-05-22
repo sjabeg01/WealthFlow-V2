@@ -508,6 +508,29 @@ export default function ImportPreviewUI({
   );
 }
 
+const CATEGORY_OPTIONS = [
+  { id: 'salary_income', label: 'Salary / Income', isIncome: true },
+  { id: 'bonus_income', label: 'Bonus / Reward', isIncome: true },
+  { id: 'investment_income', label: 'Investment Income', isIncome: true },
+  { id: 'refund_income', label: 'Refund / Reversal', isIncome: true },
+  { id: 'transfer_in', label: 'Transfer In', isIncome: true },
+
+  { id: 'utilities', label: 'Utilities', isIncome: false },
+  { id: 'rent_mortgage', label: 'Rent / Mortgage', isIncome: false },
+  { id: 'insurance', label: 'Insurance', isIncome: false },
+  { id: 'shopping', label: 'Shopping', isIncome: false },
+  { id: 'groceries', label: 'Groceries', isIncome: false },
+  { id: 'health', label: 'Health', isIncome: false },
+  { id: 'entertainment', label: 'Entertainment', isIncome: false },
+  { id: 'education', label: 'Education', isIncome: false },
+  { id: 'subscriptions', label: 'Subscriptions', isIncome: false },
+  { id: 'transport', label: 'Transport', isIncome: false },
+  { id: 'fuel', label: 'Fuel', isIncome: false },
+  { id: 'transfer_out', label: 'Transfer Out', isIncome: false },
+
+  { id: 'uncategorized', label: 'Uncategorized', isIncome: false },
+];
+
 function ClassificationPreview({ 
   rows, 
   mapping, 
@@ -520,6 +543,7 @@ function ClassificationPreview({
   onRowsChange: (rows: ParsedRow[]) => void; 
 }) {
   const [overrides, setOverrides] = React.useState<Record<number, FinalType | 'skip'>>({});
+  const [categoryOverrides, setCategoryOverrides] = React.useState<Record<number, string>>({});
 
   const classifiedRows = React.useMemo(() => {
     return rows.map((row) => {
@@ -594,6 +618,14 @@ function ClassificationPreview({
       ...prev,
       [rowIndex]: override
     }));
+  }
+
+  function handleCategoryOverride(rowIndex: number, categoryId: string) {
+    const category = CATEGORY_OPTIONS.find(c => c.id === categoryId);
+    if (!category) return;
+    setCategoryOverrides(prev => ({ ...prev, [rowIndex]: categoryId }));
+    const derivedType: FinalType = category.isIncome ? 'income' : 'expense';
+    handleOverride(rowIndex, derivedType);
   }
 
   return (
@@ -681,17 +713,16 @@ function ClassificationPreview({
                       <td style={{ padding: '0.75rem 1rem' }}>
                         <select
                           className="input"
-                          style={{ padding: '0.25rem 0.5rem', height: '30px' }}
-                          value={row.user_override ?? row.final_type}
-                          onChange={e => handleOverride(row.rowIndex, e.target.value as FinalType | 'skip')}
+                          style={{ padding: '0.25rem 0.5rem', height: '30px', width: '180px' }}
+                          value={categoryOverrides[row.rowIndex] || ''}
+                          onChange={e => handleCategoryOverride(row.rowIndex, e.target.value)}
                         >
-                          <option value="needs_review">Needs Review</option>
-                          <option value="expense">Expense</option>
-                          <option value="income">Income</option>
-                          <option value="transfer">Transfer</option>
-                          <option value="investment">Investment</option>
-                          <option value="refund">Refund</option>
-                          <option value="skip">Skip / Discard</option>
+                          <option value="">-- Select Category --</option>
+                          {CATEGORY_OPTIONS.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.label}
+                            </option>
+                          ))}
                         </select>
                       </td>
                     </tr>

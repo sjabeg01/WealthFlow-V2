@@ -1,6 +1,8 @@
 import { parseDateParams } from '@/lib/dateParams';
 import { getFinanceSummary, getByCategory, getTrend, formatCurrency } from '@/lib/financeEngine';
-import { getTransactions, getGoals, getUserSession, getDataSources } from '@/lib/dataService';
+import { getTransactions, getGoals, getUserSession, getDataSources, hasAnySources } from '@/lib/dataService';
+import { cookies } from 'next/headers';
+import SetupWizardWrapper from '@/components/sources/SetupWizardWrapper';
 import { Sparkles } from 'lucide-react';
 import PeriodSelector from '@/components/shared/PeriodSelector';
 import Card from '@/components/ui/Card';
@@ -36,8 +38,14 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
   // Top 5 recent transactions
   const recentTransactions = transactions.slice(0, 5);
 
+  const cookieStore = await cookies();
+  const setupDismissed = cookieStore.get('rakam_setup_dismissed')?.value === 'true';
+  const hasSources = await hasAnySources();
+  const showWizard = !setupDismissed && !hasSources;
+
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      {showWizard && <SetupWizardWrapper />}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 style={{ margin: '0 0 0.5rem 0', fontSize: '1.5rem', fontWeight: 600 }}>Dashboard</h1>

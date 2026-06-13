@@ -78,16 +78,8 @@
 ---
 
 ## 8. Source Integration Rules
-- **CSV is Primary:** CSV/Excel file upload via the Import pipeline remains the PRIMARY and fully-supported data ingestion method. Every import commits to `data_sources` automatically.
-- **Bank Connect is Secondary/Beta:** The Bank Connect UI flow (3-step modal: Consent → Select Bank → Beta screen) is UI-only. It MUST display a clear "Beta — Coming Soon" screen at Step 3. No real bank credentials are collected or stored.
-- **Auto-Source Linking:** After every successful `commitImportBatch`, the system must:
-  1. Find or auto-create a `data_sources` record of type `csv` labelled "CSV Uploads".
-  2. Link the `import_batch_id` → `source_id` on the batch.
-  3. Link all `transactions.source_id` for that batch.
-  4. Write a `sync_logs` record with `status: 'success'` and row counts.
-- **Setup Wizard Gate:** New users (no data sources, `rakam_setup_dismissed` cookie not set) MUST see the `SetupWizard` full-screen overlay on first load. It is dismissible via "Skip" or by connecting a source.
-- **Status Dots:** `StatusDot` color logic is: `green` = active/success, `yellow` = syncing or partial, `red` = error/disconnected, `gray` = no sources. Animated ping only on `syncing`.
-- **Source Detail Page:** `/sources/[id]` is a Server Component that reads `data_sources` + `sync_logs` for that source. It must show stats, error state if any, and the last N sync log rows.
-- **Sidebar Indicator:** `SyncStatusIndicator` in the sidebar footer fetches sources client-side on mount and displays the overall health dot.
-- **Demo Mode:** All source functions (`getDataSources`, `createDataSource`, etc.) MUST check `isDemoModeActive()` and use in-memory arrays if true. No DB writes in demo mode.
-- **DB Schema:** `data_sources` and `sync_logs` are defined in `supabase/migrations/009_data_sources.sql`. RLS enforces user-scoped access.
+- **CSV is Primary:** CSV/Excel import remains the primary, guaranteed method of data ingestion.
+- **Bank Connect is Secondary/Beta:** Direct bank connections (e.g. Nabil, SBL) are treated as secondary or beta features.
+- **Sync Status Indicators:** Connected sources must have clear status indicators (green/yellow/red dots) reflecting active, syncing, or error states.
+- **Source Details:** Every source must have a detail page showing its sync history, total transactions, and connection status.
+- **Traceability:** Every transaction should link back to a `data_source` (via `source_id`). Every sync attempt must produce a `sync_log` record for auditability.

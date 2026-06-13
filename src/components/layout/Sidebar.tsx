@@ -12,7 +12,12 @@ import {
   TrendingUp,
   Settings,
   LogOut,
+  Database,
 } from 'lucide-react';
+import { fetchSources } from '@/app/actions';
+import type { DataSource } from '@/types';
+import SyncStatusIndicator from '@/components/sources/SyncStatusIndicator';
+import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import styles from '@/app/(app)/app.module.css';
 
@@ -30,12 +35,18 @@ const INVEST_NAV_ITEMS = [
 ];
 
 const BOTTOM_NAV_ITEMS = [
+  { href: '/sources',      label: 'Data Sources', icon: Database },
   { href: '/settings',     label: 'Settings',     icon: Settings },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [sources, setSources] = useState<DataSource[]>([]);
+
+  useEffect(() => {
+    fetchSources().then(setSources).catch(console.error);
+  }, []);
 
   async function handleSignOut() {
     try {
@@ -131,7 +142,8 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className={styles.sidebarFooter}>
+      <div className={styles.sidebarFooter} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <SyncStatusIndicator sources={sources} />
         <button className={styles.signOutBtn} onClick={handleSignOut} id="sign-out">
           <LogOut size={17} />
           Sign out

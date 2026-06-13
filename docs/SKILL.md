@@ -74,3 +74,20 @@
 - **Account Selection:** A target account MUST be selected or created inline before committing an import.
 - **Duplicate Detection:** O(1) database duplicate detection must run *before* commit. Duplicates must be moved to 'Skipped' to prevent double-counting.
 - **Math Consistency:** The committed import rows must precisely match the mathematical aggregation shown on the Dashboard and Reports.
+
+---
+
+## 8. Source Integration Rules
+- **CSV is Primary:** CSV/Excel file upload via the Import pipeline remains the PRIMARY and fully-supported data ingestion method. Every import commits to `data_sources` automatically.
+- **Bank Connect is Secondary/Beta:** The Bank Connect UI flow (3-step modal: Consent → Select Bank → Beta screen) is UI-only. It MUST display a clear "Beta — Coming Soon" screen at Step 3. No real bank credentials are collected or stored.
+- **Auto-Source Linking:** After every successful `commitImportBatch`, the system must:
+  1. Find or auto-create a `data_sources` record of type `csv` labelled "CSV Uploads".
+  2. Link the `import_batch_id` → `source_id` on the batch.
+  3. Link all `transactions.source_id` for that batch.
+  4. Write a `sync_logs` record with `status: 'success'` and row counts.
+- **Setup Wizard Gate:** New users (no data sources, `rakam_setup_dismissed` cookie not set) MUST see the `SetupWizard` full-screen overlay on first load. It is dismissible via "Skip" or by connecting a source.
+- **Status Dots:** `StatusDot` color logic is: `green` = active/success, `yellow` = syncing or partial, `red` = error/disconnected, `gray` = no sources. Animated ping only on `syncing`.
+- **Source Detail Page:** `/sources/[id]` is a Server Component that reads `data_sources` + `sync_logs` for that source. It must show stats, error state if any, and the last N sync log rows.
+- **Sidebar Indicator:** `SyncStatusIndicator` in the sidebar footer fetches sources client-side on mount and displays the overall health dot.
+- **Demo Mode:** All source functions (`getDataSources`, `createDataSource`, etc.) MUST check `isDemoModeActive()` and use in-memory arrays if true. No DB writes in demo mode.
+- **DB Schema:** `data_sources` and `sync_logs` are defined in `supabase/migrations/009_data_sources.sql`. RLS enforces user-scoped access.

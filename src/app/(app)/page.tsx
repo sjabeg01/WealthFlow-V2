@@ -1,6 +1,6 @@
 import { parseDateParams } from '@/lib/dateParams';
 import { getFinanceSummary, getByCategory, getTrend, formatCurrency } from '@/lib/financeEngine';
-import { getTransactions, getGoals, getUserSession } from '@/lib/dataService';
+import { getTransactions, getGoals, getUserSession, getDataSources } from '@/lib/dataService';
 import { Sparkles } from 'lucide-react';
 import PeriodSelector from '@/components/shared/PeriodSelector';
 import Card from '@/components/ui/Card';
@@ -8,6 +8,7 @@ import CategoryDonut from '@/components/reports/CategoryDonut';
 import IncomeExpenseTrend from '@/components/dashboard/IncomeExpenseTrend';
 import RecentTransactions from '@/components/dashboard/RecentTransactions';
 import InsightsBlock from '@/components/dashboard/InsightsBlock';
+import DashboardSources from '@/components/dashboard/DashboardSources';
 
 export const metadata = {
   title: 'Dashboard | Rakam',
@@ -25,6 +26,7 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
   // Fetch transactions using the central service
   const transactions = await getTransactions(from, to);
   const goals = await getGoals();
+  const sources = await getDataSources();
   
   // Math is 100% powered by the single source of truth
   const summary = getFinanceSummary(transactions, goals);
@@ -105,14 +107,17 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
 
       {/* Row 3: Insights and Recent Transactions */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.5rem' }}>
-        <Card>
-          <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--color-border)' }}>
-            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Automated Insights</h3>
-          </div>
-          <div style={{ padding: '1.5rem' }}>
-            <InsightsBlock transactions={transactions} goals={goals} />
-          </div>
-        </Card>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <DashboardSources initialSources={sources} />
+          <Card>
+            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--color-border)' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Automated Insights</h3>
+            </div>
+            <div style={{ padding: '1.5rem' }}>
+              <InsightsBlock transactions={transactions} goals={goals} />
+            </div>
+          </Card>
+        </div>
 
         <Card>
           <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--color-border)' }}>

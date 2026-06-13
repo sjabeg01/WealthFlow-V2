@@ -39,3 +39,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# scratch / dev scripts (not meant for repo)
+scratch/
+scratch_*.js
+cortex_*.js
+normalizer_spec.txt
+dev_server.log
+smokeTest.js
+createQAUser.js
+generate_qa_files.js
+test-classification.js
+test-classification.ts
+verify_invariants.ts
+qa-test.*
+test_import.csv
+test-statement.*

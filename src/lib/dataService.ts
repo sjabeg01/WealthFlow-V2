@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
-import type { Transaction, Category, Goal, Account, Investment, ImportBatch } from '@/types';
+import type { Transaction, Category, Goal, Account, Investment, ImportBatch, DataSource, SyncLog } from '@/types';
 import { DEMO_TRANSACTIONS, DEMO_CATEGORIES, DEMO_GOALS, DEMO_ACCOUNTS, DEMO_INVESTMENTS } from '@/lib/demo/demoData';
 
 // --- In-Memory Demo State ---
@@ -10,6 +10,8 @@ let inMemoryDemoCategories = [...DEMO_CATEGORIES];
 let inMemoryDemoGoals = [...DEMO_GOALS];
 let inMemoryDemoAccounts = [...DEMO_ACCOUNTS];
 let inMemoryDemoInvestments = [...DEMO_INVESTMENTS];
+let inMemoryDemoSources: DataSource[] = [];
+let inMemoryDemoSyncLogs: SyncLog[] = [];
 
 export function resetDemoState() {
   inMemoryDemoTransactions = [...DEMO_TRANSACTIONS];
@@ -17,6 +19,8 @@ export function resetDemoState() {
   inMemoryDemoGoals = [...DEMO_GOALS];
   inMemoryDemoAccounts = [...DEMO_ACCOUNTS];
   inMemoryDemoInvestments = [...DEMO_INVESTMENTS];
+  inMemoryDemoSources = [];
+  inMemoryDemoSyncLogs = [];
 }
 
 /**
@@ -426,4 +430,239 @@ export async function deleteInvestment(invId: string) {
     .eq('user_id', user.id);
 
   if (error) throw new Error(error.message);
+}
+
+// --------------------------------------------------------
+// DATA SOURCES & SYNC LOGS
+// --------------------------------------------------------
+
+export async function hasAnySources(): Promise<boolean> {
+  const isDemo = await isDemoModeActive();
+  if (isDemo) return inMemoryDemoSources.length > 0;
+
+  const { user } = await getUserSession();
+  if (!user) return false;
+
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from('data_sources')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id);
+
+  return (count || 0) > 0;
+}
+
+export async function getDataSources(): Promise<DataSource[]> {
+  const isDemo = await isDemoModeActive();
+  if (isDemo) {
+    return [...inMemoryDemoSources].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  const { user } = await getUserSession();
+  if (!user) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('data_sources')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+
+  // Convert snake_case to camelCase
+  return (data || []).map(s => ({
+    id: s.id,
+    userId: s.user_id,
+    type: s.type,
+    label: s.label,
+    status: s.status,
+    lastSyncAt: s.last_sync_at,
+    lastSyncStatus: s.last_sync_status,
+    lastErrorMessage: s.last_error_message,
+    metadata: s.metadata,
+    transactionCount: s.transaction_count,
+    dateRangeFrom: s.date_range_from,
+    dateRangeTo: s.date_range_to,
+    createdAt: s.created_at,
+    updatedAt: s.updated_at,
+  })) as DataSource[];
+}
+
+export async function createDataSource(data: Partial<DataSource>): Promise<DataSource> {
+  const isDemo = await isDemoModeActive();
+  
+  const newSource = {
+    id: data.id || `src-${Date.now()}`,
+    userId: 'demo-user',
+    type: data.type || 'manual',
+    label: data.label || 'Unknown',
+    status: data.status || 'active',
+    metadata: data.metadata || {},
+    transactionCount: data.transactionCount || 0,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    ...data
+  } as DataSource;
+
+  if (isDemo) {
+    inMemoryDemoSources.push(newSource);
+    return newSource;
+  }
+
+  const { user } = await getUserSession();
+  if (!user) throw new Error('Unauthorized');
+
+  newSource.userId = user.id;
+  
+  const supabase = await createClient();
+  const dbPayload = {
+    user_id: user.id,
+    type: newSource.type,
+    label: newSource.label,
+    status: newSource.status,
+    metadata: newSource.metadata,
+    transaction_count: newSource.transactionCount,
+    last_sync_at: newSource.lastSyncAt,
+    last_sync_status: newSource.lastSyncStatus,
+    date_range_from: newSource.dateRangeFrom,
+    date_range_to: newSource.dateRangeTo,
+  };
+
+  const { data: result, error } = await supabase
+    .from('data_sources')
+    .insert([dbPayload])
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  
+  return {
+    ...newSource,
+    id: result.id,
+    createdAt: result.created_at,
+    updatedAt: result.updated_at,
+  };
+}
+
+export async function updateDataSourceStatus(
+  id: string, 
+  status: string, 
+  metadata?: Record<string, any>
+) {
+  const isDemo = await isDemoModeActive();
+  if (isDemo) {
+    const idx = inMemoryDemoSources.findIndex(s => s.id === id);
+    if (idx !== -1) {
+      inMemoryDemoSources[idx].status = status as any;
+      inMemoryDemoSources[idx].updatedAt = new Date().toISOString();
+      if (metadata) {
+        inMemoryDemoSources[idx].metadata = { ...inMemoryDemoSources[idx].metadata, ...metadata };
+      }
+    }
+    return;
+  }
+
+  const { user } = await getUserSession();
+  if (!user) throw new Error('Unauthorized');
+
+  const supabase = await createClient();
+  const payload: any = { 
+    status, 
+    updated_at: new Date().toISOString() 
+  };
+  if (metadata) payload.metadata = metadata;
+
+  const { error } = await supabase
+    .from('data_sources')
+    .update(payload)
+    .eq('id', id)
+    .eq('user_id', user.id);
+
+  if (error) throw new Error(error.message);
+}
+
+export async function getSyncLogs(sourceId: string, limit = 5): Promise<SyncLog[]> {
+  const isDemo = await isDemoModeActive();
+  if (isDemo) {
+    return inMemoryDemoSyncLogs
+      .filter(l => l.sourceId === sourceId)
+      .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+      .slice(0, limit);
+  }
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('sync_logs')
+    .select('*')
+    .eq('source_id', sourceId)
+    .order('started_at', { ascending: false })
+    .limit(limit);
+
+  return (data || []).map(l => ({
+    id: l.id,
+    sourceId: l.source_id,
+    status: l.status,
+    transactionsFound: l.transactions_found,
+    transactionsImported: l.transactions_imported,
+    transactionsSkipped: l.transactions_skipped,
+    errorMessage: l.error_message,
+    errorDetails: l.error_details,
+    durationMs: l.duration_ms,
+    startedAt: l.started_at,
+    completedAt: l.completed_at,
+  })) as SyncLog[];
+}
+
+export async function createSyncLog(sourceId: string, data: Partial<SyncLog>) {
+  const isDemo = await isDemoModeActive();
+  const newLog = {
+    id: `log-${Date.now()}`,
+    sourceId,
+    startedAt: new Date().toISOString(),
+    status: 'running',
+    transactionsFound: 0,
+    transactionsImported: 0,
+    transactionsSkipped: 0,
+    durationMs: 0,
+    ...data
+  } as SyncLog;
+
+  if (isDemo) {
+    inMemoryDemoSyncLogs.push(newLog);
+    return newLog;
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from('sync_logs').insert([{
+    source_id: sourceId,
+    status: newLog.status,
+    transactions_found: newLog.transactionsFound,
+    transactions_imported: newLog.transactionsImported,
+    transactions_skipped: newLog.transactionsSkipped,
+    error_message: newLog.errorMessage,
+    error_details: newLog.errorDetails,
+    duration_ms: newLog.durationMs,
+    started_at: newLog.startedAt,
+    completed_at: newLog.completedAt,
+  }]);
+
+  if (error) throw new Error(error.message);
+}
+
+export async function linkImportBatchToSource(importBatchId: string, sourceId: string) {
+  const isDemo = await isDemoModeActive();
+  if (isDemo) return; // In demo mode, relations are mocked anyway
+
+  const supabase = await createClient();
+  
+  // Link batch
+  await supabase
+    .from('import_batches')
+    .update({ source_id: sourceId })
+    .eq('id', importBatchId);
+    
+  // Link transactions
+  await supabase
+    .from('transactions')
+    .update({ source_id: sourceId })
+    .eq('import_batch_id', importBatchId);
 }

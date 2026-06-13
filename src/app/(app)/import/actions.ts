@@ -7,6 +7,7 @@ import { deriveFinalType, type ClassificationContext } from '@/lib/importPipelin
 import { normalizeRawRow } from '@/lib/importPipeline/normalizer';
 import { normalizeAmount } from '@/lib/importPipeline/normalizeAmount';
 import { processTransferPairing } from '@/lib/import/transferMatcher';
+import { getDataSources, createDataSource, createSyncLog, linkImportBatchToSource } from '@/lib/dataService';
 
 export async function commitImportBatch(
   accountId: string,
@@ -277,6 +278,33 @@ export async function commitImportBatch(
 
   // 7. Post-import: Process Transfer Pairing
   await processTransferPairing(userId);
+
+  // 8. Link to Data Source
+  try {
+    const sources = await getDataSources();
+    let csvSource = sources.find(s => s.type === 'csv');
+    
+    if (!csvSource) {
+      csvSource = await createDataSource({
+        type: 'csv',
+        label: 'CSV Uploads',
+        status: 'active',
+        metadata: { createdAuto: true }
+      });
+    }
+
+    await linkImportBatchToSource(batchId, csvSource.id);
+
+    await createSyncLog(csvSource.id, {
+      status: 'success',
+      transactionsFound: preview.acceptedRows.length + preview.skippedRows.length,
+      transactionsImported: finalAcceptedRows.length,
+      transactionsSkipped: preview.skippedRows.length + finalSkippedDueToDuplicate.length,
+      completedAt: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('Failed to link source', err);
+  }
 
   return { success: true, batchId };
 }

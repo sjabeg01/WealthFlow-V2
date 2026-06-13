@@ -187,13 +187,20 @@ export async function updateTransactionCategory(transactionId: string, categoryI
   if (isDemo) {
     const txIndex = inMemoryDemoTransactions.findIndex(t => t.id === transactionId);
     if (txIndex !== -1) {
-      // Only update the category fields. final_type, amount
-      // are set at import time and remain immutable unless the transaction is re-imported.
       const cat = inMemoryDemoCategories.find(c => c.id === categoryId);
+      // Derive final_type from category type so amount sign flips correctly
+      let derivedFinalType: string | undefined;
+      if (cat?.type === 'income_only') {
+        derivedFinalType = 'income';
+      } else if (cat?.type === 'expense_only') {
+        derivedFinalType = 'expense';
+      }
       inMemoryDemoTransactions[txIndex] = {
         ...inMemoryDemoTransactions[txIndex],
         category_id: categoryId,
         category: cat as any,
+        ...(derivedFinalType ? { final_type: derivedFinalType as any } : {}),
+        user_corrected: true,
       };
     }
     return;
@@ -204,11 +211,33 @@ export async function updateTransactionCategory(transactionId: string, categoryI
 
   const supabase = await createClient();
 
-  // Only update category_id. final_type, amount
-  // are fixed at import time and must not be mutated by a category change.
+  // Look up the category to derive final_type from its type
+  let derivedFinalType: string | undefined;
+  if (categoryId) {
+    const { data: catData } = await supabase
+      .from('categories')
+      .select('type')
+      .eq('id', categoryId)
+      .single();
+    if (catData?.type === 'income_only') {
+      derivedFinalType = 'income';
+    } else if (catData?.type === 'expense_only') {
+      derivedFinalType = 'expense';
+    }
+    // 'mixed' or null → keep existing final_type
+  }
+
+  const updatePayload: Record<string, any> = {
+    category_id: categoryId,
+    user_corrected: true,
+  };
+  if (derivedFinalType) {
+    updatePayload.final_type = derivedFinalType;
+  }
+
   const { error } = await supabase
     .from('transactions')
-    .update({ category_id: categoryId })
+    .update(updatePayload)
     .eq('id', transactionId)
     .eq('user_id', user.id);
 

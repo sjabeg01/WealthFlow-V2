@@ -31,12 +31,23 @@ export default function TransactionTable({ transactions, categories }: Transacti
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [optimisticCategories, setOptimisticCategories] = useState<Record<string, string | null>>({});
+  const [optimisticFinalTypes, setOptimisticFinalTypes] = useState<Record<string, string>>({});
   const [saveStatus, setSaveStatus] = useState<Record<string, 'saving' | 'saved' | 'error'>>({});
 
   const handleCategoryChange = (transactionId: string, categoryId: string | null) => {
     // Optimistic UI update
     setOptimisticCategories(prev => ({ ...prev, [transactionId]: categoryId }));
     setSaveStatus(prev => ({ ...prev, [transactionId]: 'saving' }));
+
+    // Derive final_type optimistically from the selected category's type
+    if (categoryId) {
+      const selectedCat = categories.find(c => c.id === categoryId);
+      if (selectedCat?.type === 'income_only') {
+        setOptimisticFinalTypes(prev => ({ ...prev, [transactionId]: 'income' }));
+      } else if (selectedCat?.type === 'expense_only') {
+        setOptimisticFinalTypes(prev => ({ ...prev, [transactionId]: 'expense' }));
+      }
+    }
     
     startTransition(async () => {
       try {
@@ -72,8 +83,9 @@ export default function TransactionTable({ transactions, categories }: Transacti
   const sortedCategories = [...categories].sort((a, b) => a.name.localeCompare(b.name));
 
   const getDisplayAmount = (transaction: any): number => {
-    const isIncome =
-      transaction.type === 'income' || transaction.type === 'transfer_in' || transaction.final_type === 'income' || transaction.final_type === 'refund';
+    // Use optimistic final_type if available (set immediately on category change)
+    const effectiveFinalType = optimisticFinalTypes[transaction.id] || transaction.final_type || transaction.type;
+    const isIncome = effectiveFinalType === 'income' || effectiveFinalType === 'transfer_in' || effectiveFinalType === 'refund';
     return isIncome
       ? Math.abs(transaction.amount || 0)
       : -Math.abs(transaction.amount || 0);

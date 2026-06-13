@@ -653,12 +653,6 @@ export async function linkImportBatchToSource(importBatchId: string, sourceId: s
   if (isDemo) return; // In demo mode, relations are mocked anyway
 
   const supabase = await createClient();
-  
-  // Link batch
-  await supabase
-    .from('import_batches')
-    .update({ source_id: sourceId })
-    .eq('id', importBatchId);
     
   // Link transactions
   await supabase

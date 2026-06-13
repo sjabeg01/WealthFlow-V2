@@ -2,25 +2,29 @@
 
 import React, { useState } from 'react';
 import { Upload, Landmark, Wallet, ChevronRight } from 'lucide-react';
-import AddSourceModal from './AddSourceModal';
-
+import { useRouter } from 'next/navigation';
+import BankConnectModal from './BankConnectModal';
 interface SetupWizardProps {
   onComplete: () => void;
   onSkip: () => void;
 }
 
 export default function SetupWizard({ onComplete, onSkip }: SetupWizardProps) {
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [initialView, setInitialView] = useState<'csv' | 'bank' | null>(null);
+  const router = useRouter();
+  const [showBankModal, setShowBankModal] = useState(false);
 
-  const handleOpenModal = (view: 'csv' | 'bank') => {
-    setInitialView(view);
-    setShowAddModal(true);
+  const handleCsvClick = () => {
+    router.push('/import');
+    onComplete(); // Dismiss wizard as they are now onboarding via CSV
   };
 
-  const handleSourceAdded = () => {
-    setShowAddModal(false);
-    onComplete();
+  const handleBankClick = () => {
+    setShowBankModal(true);
+  };
+
+  const handleBankClose = () => {
+    setShowBankModal(false);
+    onComplete(); // Once they finish the bank modal (or cancel), consider it complete.
   };
 
   return (
@@ -71,7 +75,7 @@ export default function SetupWizard({ onComplete, onSkip }: SetupWizardProps) {
         }}>
           {/* Option 1: CSV */}
           <div 
-            onClick={() => handleOpenModal('csv')}
+            onClick={handleCsvClick}
             style={{
               background: 'rgba(255, 255, 255, 0.05)',
               border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -128,7 +132,7 @@ export default function SetupWizard({ onComplete, onSkip }: SetupWizardProps) {
 
           {/* Option 2: Bank Sync */}
           <div 
-            onClick={() => handleOpenModal('bank')}
+            onClick={handleBankClick}
             style={{
               background: 'rgba(255, 255, 255, 0.05)',
               border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -253,11 +257,9 @@ export default function SetupWizard({ onComplete, onSkip }: SetupWizardProps) {
         </div>
       </div>
 
-      <AddSourceModal 
-        isOpen={showAddModal} 
-        onClose={() => setShowAddModal(false)}
-        onSourceAdded={handleSourceAdded}
-        initialView={initialView}
+      <BankConnectModal 
+        isOpen={showBankModal} 
+        onClose={handleBankClose}
       />
     </div>
   );
